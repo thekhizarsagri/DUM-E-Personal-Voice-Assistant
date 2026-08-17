@@ -4,7 +4,7 @@ import time
 import threading
 import random
 
-# DUM-E // Jarvis-class theme — blue, cyan, red only
+# DUM-E theme — blue, cyan, red only
 BG_COLOR = "#04060c"
 PANEL_COLOR = "#081018"
 CYAN = "#00e5ff"
@@ -79,7 +79,7 @@ class FuturisticGUI:
         self.title.place(x=22, y=14)
 
         self.subtitle = tk.Label(
-            self.canvas, text="JARVIS-CLASS INTERFACE // DEEP UNIVERSAL MIND ELECTRIC",
+            self.canvas, text="HOLO INTERFACE // DEEP UNIVERSAL MIND ELECTRIC",
             font=("Consolas", 8), fg=DIM_COLOR, bg=BG_COLOR,
         )
         self.subtitle.place(x=24, y=40)
@@ -345,5 +345,5 @@ class FuturisticGUI:
 if __name__ == "__main__":
     root = tk.Tk()
     gui = FuturisticGUI(root)
-    gui.add_message("Jarvis-class interface online. Awaiting commands, Sir.", sender="assistant")
+    gui.add_message("Holo interface online. Awaiting commands, Sir.", sender="assistant")
     root.mainloop()

@@ -1,12 +1,12 @@
 # 🤖 DUM-E: Personal Voice Assistant
 
-> **Deep Universal Mind Electric** — An AI-powered personal voice assistant inspired by Tony Stark's J.A.R.V.I.S.
+> **Deep Universal Mind Electric** — An AI-powered personal voice assistant.
 
 ---
 
 ## 📜 Origin Story & About
 
-This project was originally created in **August 2025** just for fun! Driven by the dream of having a personal voice assistant to handle day-to-day tasks like Iron Man's J.A.R.V.I.S., **DUM-E** was built to provide an interactive, voice-driven interface powered by fast AI and dynamic visual feedback.
+This project was originally created in **August 2025** just for fun! Driven by the dream of having a personal voice assistant to handle day-to-day tasks, **DUM-E** was built to provide an interactive, voice-driven interface powered by fast AI and dynamic visual feedback.
 
 > 🚀 **Modern Tech Upgrade Coming Soon!**  
 > This repository contains the original 2025 codebase of DUM-E uploaded to GitHub. Now, the project is being prepared for a major overhaul to integrate state-of-the-art modern AI tools, agentic workflows, real-time audio models, and expanded skill integrations.
@@ -90,4 +90,4 @@ python dum_e_main.py
 
 ---
 
-*“Sometimes you gotta run before you can walk.” — Tony Stark*
+*“Sometimes you gotta run before you can walk.”*
