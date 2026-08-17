@@ -115,6 +115,13 @@ def route_command(command, gui):
 
     return False
 
+def handle_typed(command, gui):
+    if route_command(command, gui):
+        return
+    gui.set_state("Thinking")
+    reply = brain.think(command)
+    respond(gui, reply)
+
 # -------------------------
 # Runner
 # -------------------------
@@ -149,5 +156,6 @@ def start_dum_e(gui):
 if __name__ == "__main__":
     root = tk.Tk()
     gui = FuturisticGUI(root)
+    gui.on_command = lambda c: handle_typed(c, gui)
     threading.Thread(target=start_dum_e, args=(gui,), daemon=True).start()
     root.mainloop()

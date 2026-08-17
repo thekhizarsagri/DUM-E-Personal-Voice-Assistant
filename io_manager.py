@@ -7,6 +7,9 @@ import speech_recognition as sr
 import edge_tts
 import pygame
 
+# Only one speech at a time — typed commands and mic share the same TTS temp files
+_SPEAK_LOCK = threading.Lock()
+
 # ----------------------------
 # Selected Voice (natural male)
 # ----------------------------
@@ -48,42 +51,43 @@ async def speak(text: str, voice: str = None):
     tmp = os.path.join(tempfile.gettempdir(), "dum_e_tts")
     os.makedirs(tmp, exist_ok=True)
 
-    # synthesize first sentence (foreground) — this is the "time to first speech"
-    first_path = os.path.join(tmp, "0.mp3")
-    try:
-        await _synth(first_path, sentences[0], voice)
-    except Exception as e:
-        print(f"TTS error: {e}")
-        return
-
-    try:
-        # play sentence 0 in a thread while prefetching the next one
-        for i, sentence in enumerate(sentences[1:], start=1):
-            next_path = os.path.join(tmp, f"{i}.mp3")
-            synth_done = threading.Event()
-
-            def _prefetch(p=next_path, s=sentence, v=voice, ev=synth_done):
-                try:
-                    asyncio.run(_synth(p, s, v))
-                except Exception:
-                    pass
-                finally:
-                    ev.set()
-
-            t = threading.Thread(target=_prefetch, daemon=True)
-            t.start()
-            _play_file(first_path)
-            synth_done.wait(timeout=15)
-            first_path = next_path
-
-        # play the last sentence
-        _play_file(first_path)
-    finally:
+    with _SPEAK_LOCK:
+        # synthesize first sentence (foreground) — this is the "time to first speech"
+        first_path = os.path.join(tmp, "0.mp3")
         try:
-            for f in os.listdir(tmp):
-                os.remove(os.path.join(tmp, f))
-        except OSError:
-            pass
+            await _synth(first_path, sentences[0], voice)
+        except Exception as e:
+            print(f"TTS error: {e}")
+            return
+
+        try:
+            # play sentence 0 in a thread while prefetching the next one
+            for i, sentence in enumerate(sentences[1:], start=1):
+                next_path = os.path.join(tmp, f"{i}.mp3")
+                synth_done = threading.Event()
+
+                def _prefetch(p=next_path, s=sentence, v=voice, ev=synth_done):
+                    try:
+                        asyncio.run(_synth(p, s, v))
+                    except Exception:
+                        pass
+                    finally:
+                        ev.set()
+
+                t = threading.Thread(target=_prefetch, daemon=True)
+                t.start()
+                _play_file(first_path)
+                synth_done.wait(timeout=15)
+                first_path = next_path
+
+            # play the last sentence
+            _play_file(first_path)
+        finally:
+            try:
+                for f in os.listdir(tmp):
+                    os.remove(os.path.join(tmp, f))
+            except OSError:
+                pass
 
 # ----------------------------
 # Speech Recognition (Ear)

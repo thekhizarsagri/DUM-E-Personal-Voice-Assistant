@@ -1,6 +1,7 @@
 import tkinter as tk
 import math
 import time
+import threading
 
 # Futuristic DUM-E theme
 BG_COLOR = "#07080d"
@@ -28,6 +29,7 @@ class FuturisticGUI:
         self.state_color = ACCENT
         self.phase = 0.0
         self._closed = False
+        self.on_command = None
 
         root.geometry("920x680")
         root.overrideredirect(True)
@@ -199,6 +201,8 @@ class FuturisticGUI:
             return
         self.add_message(text, sender="user")
         self.input_var.set("")
+        if self.on_command:
+            threading.Thread(target=self.on_command, args=(text,), daemon=True).start()
 
     # ---------------- Status bar ----------------
     def _build_status_bar(self):

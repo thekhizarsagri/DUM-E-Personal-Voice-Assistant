@@ -16,7 +16,7 @@ This project was originally created in **August 2025** just for fun! Driven by t
 ## ✨ Features
 
 - 🎙️ **Voice Recognition & Speech Synthesis**: Natural voice input via microphone and instant streaming speech feedback using `edge-tts` and `pygame`.
-- 🧠 **Groq LLM Integration**: Fast conversational intelligence powered by Groq's high-speed inference engine (`llama-3.3-70b-versatile`).
+- 🧠 **Groq LLM Integration**: Fast conversational intelligence powered by Groq's high-speed inference engine (`openai/gpt-oss-120b` with automatic fallback).
 - 🎨 **Futuristic Animated UI**: Built with Tkinter featuring glowing neon visual effects, dynamic pulsing orb animations, real-time clock, and custom title bars.
 - ⚡ **Voice Skills & Intent Routing**:
   - **Live Weather Data**: Instant local weather updates via Open-Meteo API.
