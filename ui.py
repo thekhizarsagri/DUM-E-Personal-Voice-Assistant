@@ -29,7 +29,7 @@ class FuturisticGUI:
         self.phase = 0.0
         self._closed = False
 
-        root.geometry("920x640")
+        root.geometry("920x680")
         root.overrideredirect(True)
         root.resizable(False, False)
         root.configure(bg=BG_COLOR, highlightthickness=0, bd=0)
@@ -40,6 +40,7 @@ class FuturisticGUI:
         self._build_title_bar()
         self._build_orb()
         self._build_chat()
+        self._build_command_bar()
         self._build_status_bar()
 
         # start animations
@@ -96,7 +97,7 @@ class FuturisticGUI:
         t = (math.sin(self.phase * 1.6) + 1) / 2
         color = hex_mix(ACCENT, ACCENT2, t)
         self.canvas.delete("border")
-        self.canvas.create_rectangle(3, 3, 917, 637, outline=color, width=2, tags="border")
+        self.canvas.create_rectangle(3, 3, 917, 677, outline=color, width=2, tags="border")
         self.canvas.tag_lower("border")
         self.root.after(40, self._tick_border)
 
@@ -173,13 +174,39 @@ class FuturisticGUI:
         self.chat.see(tk.END)
         self.chat.config(state=tk.DISABLED)
 
+    # ---------------- Command input ----------------
+    def _build_command_bar(self):
+        self.input_var = tk.StringVar()
+        self.command_entry = tk.Entry(
+            self.canvas, textvariable=self.input_var, font=("Consolas", 12),
+            bg=PANEL_COLOR, fg=TEXT_COLOR, insertbackground=ACCENT,
+            bd=0, highlightthickness=0,
+        )
+        self.command_entry.place(x=24, y=598, width=720, height=30)
+        self.command_entry.bind("<Return>", self._send_command)
+
+        self.send_btn = tk.Button(
+            self.canvas, text="SEND", font=("Consolas", 10, "bold"),
+            fg=BG_COLOR, bg=ACCENT, bd=0, cursor="hand2",
+            activebackground=ACCENT2, activeforeground="#fff",
+            command=self._send_command,
+        )
+        self.send_btn.place(x=756, y=598, width=140, height=30)
+
+    def _send_command(self, _event=None):
+        text = self.input_var.get().strip()
+        if not text:
+            return
+        self.add_message(text, sender="user")
+        self.input_var.set("")
+
     # ---------------- Status bar ----------------
     def _build_status_bar(self):
         self.status_label = tk.Label(
             self.canvas, text="Listening...", font=("Consolas", 12, "bold"),
             fg=ACCENT, bg=BG_COLOR,
         )
-        self.status_label.place(x=460, y=600, anchor="center")
+        self.status_label.place(x=460, y=650, anchor="center")
 
     def _tick_clock(self):
         if self._closed:
