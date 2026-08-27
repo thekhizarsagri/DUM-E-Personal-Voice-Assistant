@@ -81,3 +81,15 @@ def find_city(command: str) -> str:
     if match:
         return strip_article(match.group(1).strip())
     return "Solapur"
+
+
+def tell_joke() -> str:
+    jokes = [
+        "Why don't scientists trust atoms? Because they make up everything!",
+        "Why did the Python programmer need glasses? Because he couldn't C#.",
+        "Why do programmers prefer dark mode? Because light attracts bugs!",
+        "Why did the developer go broke? Because he used up all his cache.",
+        "How many programmers does it take to change a light bulb? None, that's a hardware problem.",
+    ]
+    import random
+    return random.choice(jokes)

@@ -95,6 +95,11 @@ def route_command(command, gui):
             gui.add_message(f"DUM-E: Opening image results for {q}", sender="assistant")
             return True
 
+    # Joke
+    if any(t in c for t in ["joke", "tell me a joke", "make me laugh"]):
+        respond(gui, tell_joke())
+        return True
+
     # YouTube
     if "youtube" in c:
         q = c.split("youtube", 1)[-1]
