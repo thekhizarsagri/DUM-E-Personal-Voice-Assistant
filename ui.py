@@ -4,14 +4,18 @@ import time
 import threading
 import random
 
-# DUM-E theme — blue, cyan, red only
-BG_COLOR = "#04060c"
-PANEL_COLOR = "#081018"
-CYAN = "#00e5ff"
-BLUE = "#2f6bff"
-RED = "#ff2d55"
-TEXT_COLOR = "#d0ecff"
-DIM_COLOR = "#2c4a6b"
+# DUM-E glass theme — transparent dark blue glass, cyan & blue only
+BG_TOP = "#0b1836"
+BG_BOTTOM = "#01040b"
+PANEL_COLOR = "#0d1f40"
+PANEL_EDGE = "#2a4d86"
+CYAN = "#00eaff"
+CYAN_SOFT = "#5fd4ff"
+BLUE = "#2f7bff"
+BLUE_SOFT = "#4d8dff"
+RED = "#1a6bff"
+TEXT_COLOR = "#d5f1ff"
+DIM_COLOR = "#5d83b4"
 
 
 def hex_mix(c1, c2, t):
@@ -34,12 +38,17 @@ class FuturisticGUI:
         self._closed = False
         self.on_command = None
 
-        root.geometry("920x700")
+        root.geometry("920x720")
         root.overrideredirect(True)
         root.resizable(False, False)
-        root.configure(bg=BG_COLOR, highlightthickness=0, bd=0)
+        try:
+            # real translucency: desktop bleeds faintly through the dark glass
+            root.attributes("-alpha", 0.94)
+        except tk.TclError:
+            pass
+        root.configure(bg=BG_BOTTOM, highlightthickness=0, bd=0)
 
-        self.canvas = tk.Canvas(root, bg=BG_COLOR, highlightthickness=0, bd=0)
+        self.canvas = tk.Canvas(root, bg=BG_BOTTOM, highlightthickness=0, bd=0)
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
         self._draw_background()
@@ -58,53 +67,65 @@ class FuturisticGUI:
         self._tick_status_dot()
         self._tick_clock()
 
-    # ---------------- Background depth grid ----------------
+    # ---------------- Glass background ----------------
     def _draw_background(self):
         c = self.canvas
-        c.delete("bg")
-        for gx in range(20, 920, 60):
-            c.create_line(gx, 0, gx, 700, fill="#08101c", width=1, tags="bg")
-        for gy in range(20, 700, 60):
-            c.create_line(0, gy, 920, gy, fill="#08101c", width=1, tags="bg")
-        # vignette: darker edge frame
-        c.create_rectangle(8, 8, 912, 692, outline="#0a1524", width=6, tags="bg")
+        w, h = 920, 720
+        img = tk.PhotoImage(width=w, height=h)
+        for y in range(h):
+            t = y / (h - 1)
+            img.put(hex_mix(BG_TOP, BG_BOTTOM, t), to=(0, y, w, y + 1))
+        self._bgimg = img
+        c.create_image(0, 0, anchor="nw", image=img, tags="bg")
+
+        # faint hologrid for depth
+        grid = hex_mix(BLUE, BG_BOTTOM, 0.82)
+        for gx in range(20, w, 60):
+            c.create_line(gx, 0, gx, h, fill=grid, width=1, tags="bg")
+        for gy in range(20, h, 60):
+            c.create_line(0, gy, w, gy, fill=grid, width=1, tags="bg")
+        # edge vignette
+        c.create_rectangle(8, 8, 912, 712, outline="#0a1a3a", width=6, tags="bg")
         c.tag_lower("bg")
+
+    # ---------------- Glow text + corner brackets ----------------
+    def _glow_text(self, x, y, text, font, color, anchor="center", tags=""):
+        c = self.canvas
+        glow = hex_mix(color, BG_BOTTOM, 0.45)
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1)):
+            c.create_text(x + dx, y + dy, text=text, font=font,
+                          fill=glow, anchor=anchor, tags=tags)
+        c.create_text(x, y, text=text, font=font, fill=color, anchor=anchor, tags=tags)
+
+    def _brackets(self, x, y, w, h, s=10, color=DIM_COLOR, tag="deco"):
+        c = self.canvas
+        for x0, y0, dx, dy in ((x, y, 1, 1), (x + w, y, -1, 1),
+                               (x, y + h, 1, -1), (x + w, y + h, -1, -1)):
+            c.create_line(x0, y0, x0 + dx * s, y0, fill=color, width=1, tags=tag)
+            c.create_line(x0, y0, x0, y0 + dy * s, fill=color, width=1, tags=tag)
 
     # ---------------- HUD header ----------------
     def _build_hud(self):
-        self.title = tk.Label(
-            self.canvas, text="◆ DUM-E",
-            font=("Consolas", 16, "bold"), fg=CYAN, bg=BG_COLOR,
-        )
-        self.title.place(x=22, y=14)
-
-        self.subtitle = tk.Label(
-            self.canvas, text="HOLO INTERFACE // DEEP UNIVERSAL MIND ELECTRIC",
-            font=("Consolas", 8), fg=DIM_COLOR, bg=BG_COLOR,
-        )
-        self.subtitle.place(x=24, y=40)
-
-        self.clock_label = tk.Label(
-            self.canvas, text="", font=("Consolas", 13, "bold"),
-            fg=TEXT_COLOR, bg=BG_COLOR,
-        )
-        self.clock_label.place(x=896, y=14, anchor="ne")
-
-        self.date_label = tk.Label(
-            self.canvas, text="", font=("Consolas", 8), fg=DIM_COLOR, bg=BG_COLOR,
-        )
-        self.date_label.place(x=896, y=40, anchor="ne")
+        self._glow_text(26, 20, "◆ DUM-E", ("Consolas", 17, "bold"), CYAN,
+                        anchor="w", tags="title")
+        self.canvas.create_text(28, 44, text="HOLO INTERFACE // DEEP UNIVERSAL MIND ELECTRIC",
+                                font=("Consolas", 8), fill=DIM_COLOR, anchor="w", tags="title")
 
         self.close_btn = tk.Button(
-            self.canvas, text="✕", font=("Consolas", 12, "bold"),
-            fg=DIM_COLOR, bg=BG_COLOR, bd=0, activebackground=RED,
-            activeforeground="#fff", cursor="hand2", command=self._close,
+            self.canvas, text="✕", font=("Consolas", 11, "bold"),
+            fg=DIM_COLOR, bg=PANEL_COLOR, bd=0, relief=tk.FLAT,
+            highlightthickness=1, highlightbackground=PANEL_EDGE,
+            activebackground=BLUE, activeforeground="#b0f0ff",
+            cursor="hand2", command=self._close,
         )
-        self.close_btn.place(x=880, y=8)
+        self.close_btn.place(x=886, y=8, width=26, height=26)
+
+        # static clock frame — drawn fresh each tick so it tracks theme color
+        self._brackets(598, 24, 286, 76, 10, hex_mix(CYAN, BG_BOTTOM, 0.5), "clockframe")
 
     # ---------------- Dragging ----------------
     def _bind_drag(self):
-        for w in (self.canvas, self.title, self.subtitle, self.clock_label, self.date_label):
+        for w in (self.canvas,):
             w.bind("<Button-1>", self._start_move)
             w.bind("<B1-Motion>", self._do_move)
 
@@ -119,7 +140,7 @@ class FuturisticGUI:
         self._closed = True
         self.root.destroy()
 
-    # ---------------- Animated border ----------------
+    # ---------------- Animated glass border ----------------
     def _tick_border(self):
         if self._closed:
             return
@@ -128,32 +149,37 @@ class FuturisticGUI:
         c = self.canvas
         c.delete("border")
 
-        c.create_rectangle(2, 2, 918, 698, outline=color, width=1, tags="border")
-        # outer soft glow frame
-        c.create_rectangle(6, 6, 914, 694, outline=hex_mix(color, BG_COLOR, 0.6), width=3, tags="border")
+        c.create_rectangle(2, 2, 918, 718, outline=color, width=1, tags="border")
+        c.create_rectangle(6, 6, 914, 714, outline=hex_mix(color, BG_BOTTOM, 0.6), width=3, tags="border")
 
         # HUD corner brackets
-        s = 22
+        s = 24
         c.create_line(4, 4 + s, 4, 4, 4 + s, 4, fill=color, width=2, tags="border")
         c.create_line(916 - s, 4, 916, 4, 916, 4 + s, fill=color, width=2, tags="border")
-        c.create_line(4, 696 - s, 4, 696, 4 + s, 696, fill=color, width=2, tags="border")
-        c.create_line(916 - s, 696, 916, 696, 916, 696 - s, fill=color, width=2, tags="border")
+        c.create_line(4, 716 - s, 4, 716, 4 + s, 716, fill=color, width=2, tags="border")
+        c.create_line(916 - s, 716, 916, 716, 916, 716 - s, fill=color, width=2, tags="border")
 
-        # header separator
-        c.create_line(24, 62, 896, 62, fill=hex_mix(color, BG_COLOR, 0.55), width=1, tags="border")
+        # header separator (left of clock module)
+        c.create_line(24, 62, 590, 62, fill=hex_mix(color, BG_BOTTOM, 0.5), width=1, tags="border")
+        # clock module border (animated to theme)
+        c.create_rectangle(600, 26, 886, 100, outline=hex_mix(color, BG_BOTTOM, 0.25), width=1, tags="border")
+        self._brackets(600, 26, 286, 74, 10, color, "border")
+        # glass-top highlight on panels
+        c.create_line(24, 336, 896, 336, fill=hex_mix(color, "#b0f0ff", 0.45), width=1, tags="border")
+        c.create_line(24, 634, 734, 634, fill=hex_mix(color, "#b0f0ff", 0.45), width=1, tags="border")
+
         c.tag_lower("border")
         self.root.after(30, self._tick_border)
 
     # ---------------- 3D arc reactor ----------------
     def _build_reactor(self):
-        self.rx, self.ry = 460, 195
-        self.rr = 60
+        self.rx, self.ry = 460, 208
+        self.rr = 62
 
     def _tick_reactor(self):
         if self._closed:
             return
         self.rot += 0.045
-        # smooth color transition toward target state color
         self._color_cur = hex_mix(self._color_cur, self._color_tgt, 0.10)
         col = self._color_cur
         c = self.canvas
@@ -163,49 +189,41 @@ class FuturisticGUI:
         r = self.rr + pulse
         cx, cy = self.rx, self.ry
 
-        # ---- gyroscope rings (3D tilted ellipses) ----
         rings = [
-            (r * 1.75, r * 0.62, 0.9, 22, 1.0),   # outer horizontal
-            (r * 1.42, r * 0.86, -0.6, 16, 2.0),  # mid tilted
-            (r * 1.12, r * 1.0, 0.4, 12, 3.0),    # near circle
+            (r * 1.75, r * 0.62, 0.9, 22, 1.0),
+            (r * 1.42, r * 0.86, -0.6, 16, 2.0),
+            (r * 1.12, r * 1.0, 0.4, 12, 3.0),
         ]
         for rx, ry, spd, dashes, w in rings:
             bbox = (cx - rx, cy - ry, cx + rx, cy + ry)
-            # back half dim, front half bright
             a = self.rot * spd * 40
             c.create_arc(bbox, start=a, extent=180, style=tk.ARC,
-                         outline=hex_mix(col, BG_COLOR, 0.72), width=int(w) + 1, tags="reactor")
+                         outline=hex_mix(col, BG_BOTTOM, 0.72), width=int(w) + 1, tags="reactor")
             c.create_arc(bbox, start=a + 180, extent=180, style=tk.ARC,
-                         outline=hex_mix(col, BG_COLOR, 0.15), width=int(w) + 2, tags="reactor")
-            # rotating bright dashes traveling along the ring
+                         outline=hex_mix(col, BG_BOTTOM, 0.15), width=int(w) + 2, tags="reactor")
             step = 360.0 / dashes
             for i in range(dashes):
                 da = self.rot * spd * 200 + i * step
                 c.create_arc(bbox, start=da, extent=step * 0.55, style=tk.ARC,
                              outline=col, width=int(w) + 2, tags="reactor")
 
-        # ---- 3D shaded core sphere ----
         bbox = (cx - r, cy - r, cx + r, cy + r)
-        c.create_oval(bbox, fill=hex_mix(BG_COLOR, col, 0.42), outline=col, width=2, tags="reactor")
+        c.create_oval(bbox, fill=hex_mix(BG_TOP, col, 0.42), outline=col, width=2, tags="reactor")
 
-        # top-left highlight crescent (3D shading)
         c.create_arc(cx - r * 1.05, cy - r * 1.0, cx + r * 0.75, cy + r * 0.9,
                      start=205, extent=115, style=tk.PIESLICE,
-                     fill=hex_mix(col, "#ffffff", 0.62), outline="", tags="reactor")
-        # bottom-right shadow crescent
+                     fill=hex_mix(col, "#b0f0ff", 0.62), outline="", tags="reactor")
         c.create_arc(cx - r * 0.75, cy - r * 0.9, cx + r * 1.05, cy + r * 1.0,
                      start=20, extent=115, style=tk.PIESLICE,
-                     fill=hex_mix(BG_COLOR, col, 0.9), outline="", tags="reactor")
+                     fill=hex_mix(BG_BOTTOM, col, 0.9), outline="", tags="reactor")
 
-        # inner glow + specular dot
         c.create_oval(cx - r * 0.55, cy - r * 0.55, cx + r * 0.55, cy + r * 0.55,
-                      fill=hex_mix(BG_COLOR, col, 0.68), outline="", tags="reactor")
+                      fill=hex_mix(BG_TOP, col, 0.68), outline="", tags="reactor")
         c.create_oval(cx - r * 0.2, cy - r * 0.2, cx + r * 0.2, cy + r * 0.2,
-                      fill=hex_mix(col, "#ffffff", 0.85), outline="", tags="reactor")
+                      fill=hex_mix(col, "#b0f0ff", 0.85), outline="", tags="reactor")
         c.create_oval(cx - r * 0.5, cy - r * 0.52, cx - r * 0.2, cy - r * 0.22,
-                      fill="#ffffff", outline="", tags="reactor")
+                      fill="#b0f0ff", outline="", tags="reactor")
 
-        # orbiting satellites on the outermost ring
         for i in range(3):
             ang = math.radians(self.rot * 55 + i * 120)
             sx = cx + math.cos(ang) * r * 1.75
@@ -220,18 +238,18 @@ class FuturisticGUI:
         palette = {
             "Listening": CYAN,
             "Thinking": BLUE,
-            "Speaking": RED,
+            "Speaking": CYAN_SOFT,
             "Busy": BLUE,
         }
         self._color_tgt = palette.get(status, CYAN)
         self.status_label.config(text=f"{status.upper()}...", fg=self._color_tgt)
 
-    # ---------------- Hologram particles ----------------
+    # ---------------- Glass droplets ----------------
     def _build_particles(self):
         self.particles = [
-            [random.uniform(180, 740), random.uniform(360, 560),
-             random.uniform(0.4, 1.4), random.uniform(1.5, 3.0), random.uniform(0, 6)]
-            for _ in range(14)
+            [random.uniform(70, 850), random.uniform(100, 300),
+             random.uniform(0.4, 1.2), random.uniform(1.2, 2.6), random.uniform(0, 6)]
+            for _ in range(16)
         ]
 
     def _tick_particles(self):
@@ -242,12 +260,12 @@ class FuturisticGUI:
         for i, p in enumerate(self.particles):
             p[1] -= p[2]
             p[4] += 0.08
-            if p[1] < 330:
-                p[0] = random.uniform(180, 740)
-                p[1] = random.uniform(540, 620)
-                p[2] = random.uniform(0.4, 1.4)
+            if p[1] < 90:
+                p[0] = random.uniform(70, 850)
+                p[1] = random.uniform(290, 330)
+                p[2] = random.uniform(0.4, 1.2)
             drift = math.sin(p[4]) * 8
-            col = hex_mix(CYAN, BG_COLOR, (p[1] - 300) / 300)
+            col = hex_mix(CYAN, BG_BOTTOM, (p[1] - 90) / 240)
             c.create_oval(p[0] + drift - p[3], p[1] - p[3], p[0] + drift + p[3], p[1] + p[3],
                           fill=col, outline="", tags="particles")
         self.root.after(30, self._tick_particles)
@@ -255,18 +273,19 @@ class FuturisticGUI:
     # ---------------- System console ----------------
     def _build_chat(self):
         panel = tk.Frame(self.canvas, bg=PANEL_COLOR,
-                         highlightthickness=1, highlightbackground=hex_mix(BLUE, BG_COLOR, 0.5),
-                         bd=0)
-        panel.place(x=24, y=336, width=872, height=262)
+                         highlightthickness=1, highlightbackground=PANEL_EDGE,
+                         bd=0, relief=tk.FLAT)
+        panel.place(x=24, y=336, width=872, height=284)
+        self._brackets(24, 336, 872, 284, 12, hex_mix(CYAN, BG_BOTTOM, 0.4), "deco")
 
         tk.Label(panel, text="// SYSTEM CONSOLE", font=("Consolas", 8, "bold"),
-                 fg=DIM_COLOR, bg=PANEL_COLOR).pack(anchor="w", padx=10, pady=(6, 0))
+                 fg=DIM_COLOR, bg=PANEL_COLOR).pack(anchor="w", padx=12, pady=(7, 0))
 
         self.chat = tk.Text(
             panel, wrap=tk.WORD, font=("Consolas", 11), bg=PANEL_COLOR, fg=TEXT_COLOR,
             bd=0, highlightthickness=0, insertbackground=CYAN,
         )
-        self.chat.pack(fill=tk.BOTH, expand=True, padx=8, pady=(4, 8))
+        self.chat.pack(fill=tk.BOTH, expand=True, padx=10, pady=(4, 10))
         self.chat.tag_configure("user", foreground=CYAN, font=("Consolas", 11, "bold"))
         self.chat.tag_configure("assistant", foreground=TEXT_COLOR)
         self.chat.config(state=tk.DISABLED)
@@ -285,9 +304,9 @@ class FuturisticGUI:
     # ---------------- Command input ----------------
     def _build_command_bar(self):
         frame = tk.Frame(self.canvas, bg=PANEL_COLOR,
-                         highlightthickness=1, highlightbackground=hex_mix(BLUE, BG_COLOR, 0.5),
-                         bd=0)
-        frame.place(x=24, y=612, width=720, height=36)
+                         highlightthickness=1, highlightbackground=PANEL_EDGE,
+                         bd=0, relief=tk.FLAT)
+        frame.place(x=24, y=634, width=710, height=40)
 
         self.input_var = tk.StringVar()
         self.command_entry = tk.Entry(
@@ -295,16 +314,17 @@ class FuturisticGUI:
             bg=PANEL_COLOR, fg=TEXT_COLOR, insertbackground=CYAN,
             bd=0, highlightthickness=0,
         )
-        self.command_entry.place(x=8, y=0, width=704, height=36)
+        self.command_entry.place(x=10, y=0, width=692, height=40)
         self.command_entry.bind("<Return>", self._send_command)
 
         self.send_btn = tk.Button(
             self.canvas, text="EXECUTE", font=("Consolas", 10, "bold"),
-            fg=BG_COLOR, bg=CYAN, bd=0, cursor="hand2",
-            activebackground=BLUE, activeforeground="#fff",
-            command=self._send_command,
+            fg=CYAN, bg=PANEL_COLOR, bd=0, relief=tk.FLAT,
+            highlightthickness=1, highlightbackground=hex_mix(CYAN, BG_BOTTOM, 0.45),
+            activebackground=BLUE, activeforeground="#b0f0ff",
+            cursor="hand2", command=self._send_command,
         )
-        self.send_btn.place(x=756, y=612, width=140, height=36)
+        self.send_btn.place(x=746, y=634, width=150, height=40)
 
     def _send_command(self, _event=None):
         text = self.input_var.get().strip()
@@ -319,27 +339,58 @@ class FuturisticGUI:
     def _build_status_bar(self):
         self.status_label = tk.Label(
             self.canvas, text="LISTENING...", font=("Consolas", 11, "bold"),
-            fg=CYAN, bg=BG_COLOR,
+            fg=CYAN, bg=BG_BOTTOM,
         )
-        self.status_label.place(x=478, y=664, anchor="w")
+        self.status_label.place(x=446, y=696, anchor="w")
 
     def _tick_status_dot(self):
         if self._closed:
             return
         pulse = (math.sin(self.rot * 1.7) + 1) / 2
         d = 3.5 + pulse * 2
-        col = hex_mix(self._color_cur, "#ffffff", pulse * 0.55)
+        col = hex_mix(self._color_cur, "#b0f0ff", pulse * 0.55)
         self.canvas.delete("dot")
-        self.canvas.create_oval(462 - d, 664 - d, 462 + d, 664 + d,
+        self.canvas.create_oval(430 - d, 696 - d, 430 + d, 696 + d,
                                 fill=col, outline="", tags="dot")
         self.root.after(40, self._tick_status_dot)
 
+    # ---------------- Futuristic digital clock (top-right) ----------------
     def _tick_clock(self):
         if self._closed:
             return
-        self.clock_label.config(text=time.strftime("%H:%M:%S"))
-        self.date_label.config(text=time.strftime("%a %b %d %Y"))
-        self.root.after(1000, self._tick_clock)
+        c = self.canvas
+        c.delete("clock")
+        now = time.localtime()
+        t_ms = time.time()
+        sep = ":" if int(t_ms * 2) % 2 == 0 else " "
+
+        hh = f"{now.tm_hour:02d}"
+        mm = f"{now.tm_min:02d}"
+        ss = f"{now.tm_sec:02d}"
+        cx, cy = 743, 62
+
+        self.canvas.create_text(cx - 30, 25, text="LOCAL TIME // SYS-CLK",
+                                font=("Consolas", 7, "bold"), fill=DIM_COLOR,
+                                anchor="w", tags="clock")
+        self._glow_text(cx - 14, cy, f"{hh}{sep}{mm}",
+                        ("Consolas", 27, "bold"), CYAN, anchor="center", tags="clock")
+        self.canvas.create_text(cx + 98, cy, text=ss,
+                                font=("Consolas", 12, "bold"),
+                                fill=CYAN_SOFT, anchor="center", tags="clock")
+        self.canvas.create_text(cx, 88, text=time.strftime("%a %b %d %Y", now).upper(),
+                                font=("Consolas", 8, "bold"), fill=DIM_COLOR,
+                                anchor="center", tags="clock")
+
+        # seconds progress bar (fills the current minute)
+        frac = (t_ms % 60) / 60.0
+        c.create_rectangle(604, 92, 882, 96, fill=hex_mix(PANEL_EDGE, BG_BOTTOM, 0.6),
+                           outline="", tags="clock")
+        c.create_rectangle(604, 92, 604 + (882 - 604) * frac, 96,
+                           fill=hex_mix(CYAN, BLUE, frac), outline="", tags="clock")
+        c.create_rectangle(604, 92, 882, 96, outline=hex_mix(CYAN, BG_BOTTOM, 0.6),
+                           width=1, tags="clock")
+
+        self.root.after(100, self._tick_clock)
 
 
 if __name__ == "__main__":
