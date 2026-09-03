@@ -1,12 +1,16 @@
 import asyncio
 import threading
+import re
 from datetime import datetime
 import tkinter as tk
 
 from brain import brain
 from io_manager import speak, mic_listener, selected_voice
 from ui import FuturisticGUI
-from skills import get_weather, open_youtube, search_google, show_image, find_city
+from skills import (
+    get_weather, open_youtube, search_google, show_image, find_city,
+    tell_joke, add_reminder, get_reminders, cancel_reminder, check_reminders
+)
 
 awake_mode = True
 
@@ -18,6 +22,24 @@ def respond(gui, message):
     gui.set_state("Speaking")
     asyncio.run(speak(message, selected_voice))
     gui.set_state("Listening")
+
+# -------------------------
+# Background reminder checker
+# -------------------------
+def reminder_checker(gui):
+    while True:
+        try:
+            due = check_reminders()
+            for r in due:
+                task = r.get("task", "something")
+                message = f"Reminder: {task}"
+                gui.add_message(message, sender="assistant")
+                gui.set_state("Speaking")
+                asyncio.run(speak(message, selected_voice))
+                gui.set_state("Listening")
+        except Exception as e:
+            print(f"Reminder checker error: {e}")
+        threading.Event().wait(timeout=30)
 
 # -------------------------
 # Intent routing
@@ -118,6 +140,27 @@ def route_command(command, gui):
         search_google(q)
         return True
 
+    # Reminders - list
+    if any(t in c for t in ["what are my reminders", "list reminders", "show reminders", "my reminders"]):
+        respond(gui, get_reminders())
+        return True
+
+    # Reminders - cancel
+    if any(t in c for t in ["cancel reminder", "remove reminder"]):
+        task = c.split("reminder", 1)[-1].strip()
+        for word in ["cancel", "remove"]:
+            task = task.replace(word, "").strip()
+        respond(gui, cancel_reminder(task))
+        return True
+
+    # Reminders - add (remind me to ... at ...)
+    remind_match = re.search(r"(?:remind me to|set reminder for)\s+(.+?)\s+(?:at|in)\s+(.+)", c)
+    if remind_match:
+        task = remind_match.group(1).strip()
+        time_str = remind_match.group(2).strip()
+        respond(gui, add_reminder(task, time_str))
+        return True
+
     return False
 
 def handle_typed(command, gui):
@@ -163,4 +206,5 @@ if __name__ == "__main__":
     gui = FuturisticGUI(root)
     gui.on_command = lambda c: handle_typed(c, gui)
     threading.Thread(target=start_dum_e, args=(gui,), daemon=True).start()
+    threading.Thread(target=reminder_checker, args=(gui,), daemon=True).start()
     root.mainloop()
