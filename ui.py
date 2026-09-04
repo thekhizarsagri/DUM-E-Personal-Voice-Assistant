@@ -3,6 +3,7 @@ import math
 import time
 import threading
 import random
+from io_manager import VOICE_CATALOG, get_voice
 
 # DUM-E glass theme — transparent dark blue glass, cyan & blue only
 BG_TOP = "#0b1836"
@@ -37,6 +38,8 @@ class FuturisticGUI:
         self.rot = 0.0
         self._closed = False
         self.on_command = None
+        self.on_voice_change = None
+        self._voice_dropdown_open = False
 
         root.geometry("920x720")
         root.overrideredirect(True)
@@ -57,6 +60,7 @@ class FuturisticGUI:
         self._build_particles()
         self._build_chat()
         self._build_command_bar()
+        self._build_voice_selector()
         self._build_status_bar()
         self._bind_drag()
 
@@ -123,6 +127,122 @@ class FuturisticGUI:
         # static clock frame — drawn fresh each tick so it tracks theme color
         self._brackets(598, 24, 286, 76, 10, hex_mix(CYAN, BG_BOTTOM, 0.5), "clockframe")
 
+    # ---------------- Voice selector ----------------
+    def _build_voice_selector(self):
+        self.voice_btn = tk.Button(
+            self.canvas, text="VOICE", font=("Consolas", 9, "bold"),
+            fg=CYAN, bg=PANEL_COLOR, bd=0, relief=tk.FLAT,
+            highlightthickness=1, highlightbackground=hex_mix(CYAN, BG_BOTTOM, 0.45),
+            activebackground=BLUE, activeforeground="#b0f0ff",
+            cursor="hand2", command=self._toggle_voice_dropdown,
+        )
+        self.voice_btn.place(x=600, y=108, width=90, height=26)
+
+        self.voice_label = tk.Label(
+            self.canvas, text="", font=("Consolas", 8),
+            fg=DIM_COLOR, bg=BG_BOTTOM,
+        )
+        self.voice_label.place(x=696, y=110, anchor="w")
+        self._update_voice_label()
+
+        self._voice_dropdown = None
+
+    def _update_voice_label(self):
+        current = get_voice()
+        for label, vid in VOICE_CATALOG:
+            if vid == current:
+                self.voice_label.config(text=label)
+                return
+        self.voice_label.config(text=current)
+
+    def _toggle_voice_dropdown(self):
+        if self._voice_dropdown_open:
+            self._close_voice_dropdown()
+        else:
+            self._open_voice_dropdown()
+
+    def _open_voice_dropdown(self):
+        if self._voice_dropdown_open:
+            return
+        self._voice_dropdown_open = True
+
+        current = get_voice()
+
+        # Position the Toplevel right below the VOICE button
+        btn_x = self.voice_btn.winfo_rootx()
+        btn_y = self.voice_btn.winfo_rooty()
+        btn_w = self.voice_btn.winfo_width()
+
+        win = tk.Toplevel(self.root)
+        win.overrideredirect(True)
+        win.configure(bg=PANEL_COLOR, highlightthickness=1, highlightbackground=CYAN)
+        win.geometry(f"{btn_w + 140}x{min(340, 36 * len(VOICE_CATALOG) + 10)}+{btn_x}+{btn_y + 28}")
+
+        # Scrollable container
+        canvas_inner = tk.Canvas(win, bg=PANEL_COLOR, highlightthickness=0, bd=0,
+                                  highlightscrollbackground=PANEL_COLOR)
+        scrollbar = tk.Scrollbar(win, orient="vertical", command=canvas_inner.yview,
+                                  bg=PANEL_COLOR, troughcolor=BG_BOTTOM, bd=0,
+                                  highlightthickness=0)
+        inner = tk.Frame(canvas_inner, bg=PANEL_COLOR)
+
+        inner.bind("<Configure>", lambda e: canvas_inner.configure(scrollregion=canvas_inner.bbox("all")))
+        canvas_inner.create_window((0, 0), window=inner, anchor="nw", tags="inner_win")
+        canvas_inner.configure(yscrollcommand=scrollbar.set)
+
+        # Make inner frame fill the canvas width
+        def _resize_inner(event):
+            canvas_inner.itemconfig("inner_win", width=event.width)
+        canvas_inner.bind("<Configure>", _resize_inner)
+
+        # Mousewheel scroll
+        def _on_mousewheel(event):
+            canvas_inner.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        canvas_inner.bind("<MouseWheel>", _on_mousewheel)
+        inner.bind("<MouseWheel>", _on_mousewheel)
+
+        for label, vid in VOICE_CATALOG:
+            is_current = (vid == current)
+            btn = tk.Button(
+                inner,
+                text=f"{'▸ ' if is_current else '  '}{label}",
+                font=("Consolas", 10, "bold" if is_current else "normal"),
+                fg=CYAN if is_current else TEXT_COLOR,
+                bg=hex_mix(BLUE, PANEL_COLOR, 0.3) if is_current else PANEL_COLOR,
+                bd=0, relief=tk.FLAT,
+                anchor="w", padx=10, pady=3,
+                activebackground=BLUE, activeforeground="#b0f0ff",
+                cursor="hand2",
+                command=lambda v=vid: self._select_voice(v),
+            )
+            btn.pack(fill="x", padx=2)
+
+        canvas_inner.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self._voice_dropdown = win
+
+        # grab_set works on Toplevel — captures all input while open
+        win.grab_set()
+        win.focus_set()
+        win.bind("<Escape>", lambda e: self._close_voice_dropdown())
+
+    def _close_voice_dropdown(self):
+        if self._voice_dropdown:
+            try:
+                self._voice_dropdown.grab_release()
+            except tk.TclError:
+                pass
+            self._voice_dropdown.destroy()
+            self._voice_dropdown = None
+        self._voice_dropdown_open = False
+
+    def _select_voice(self, voice_id):
+        self._close_voice_dropdown()
+        self._update_voice_label()
+        if self.on_voice_change:
+            threading.Thread(target=self.on_voice_change, args=(voice_id,), daemon=True).start()
+
     # ---------------- Dragging ----------------
     def _bind_drag(self):
         for w in (self.canvas,):
@@ -130,10 +250,17 @@ class FuturisticGUI:
             w.bind("<B1-Motion>", self._do_move)
 
     def _start_move(self, event):
+        # Don't drag if clicking on interactive widgets
+        widget = event.widget.winfo_containing(event.x_root, event.y_root)
+        if isinstance(widget, (tk.Button, tk.Entry, tk.Scrollbar)):
+            return
         self._drag_x = event.x_root - self.root.winfo_x()
         self._drag_y = event.y_root - self.root.winfo_y()
+        self._dragging = True
 
     def _do_move(self, event):
+        if not getattr(self, '_dragging', False):
+            return
         self.root.geometry(f"+{event.x_root - self._drag_x}+{event.y_root - self._drag_y}")
 
     def _close(self):

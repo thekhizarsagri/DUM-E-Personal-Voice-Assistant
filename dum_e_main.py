@@ -5,7 +5,7 @@ from datetime import datetime
 import tkinter as tk
 
 from brain import brain
-from io_manager import speak, mic_listener, selected_voice
+from io_manager import speak, mic_listener, set_voice, get_voice, VOICE_CATALOG
 from ui import FuturisticGUI
 from skills import (
     get_weather, open_youtube, search_google, show_image, find_city,
@@ -20,7 +20,7 @@ awake_mode = True
 def respond(gui, message):
     gui.add_message(message, sender="assistant")
     gui.set_state("Speaking")
-    asyncio.run(speak(message, selected_voice))
+    asyncio.run(speak(message))
     gui.set_state("Listening")
 
 # -------------------------
@@ -35,7 +35,7 @@ def reminder_checker(gui):
                 message = f"Reminder: {task}"
                 gui.add_message(message, sender="assistant")
                 gui.set_state("Speaking")
-                asyncio.run(speak(message, selected_voice))
+                asyncio.run(speak(message))
                 gui.set_state("Listening")
         except Exception as e:
             print(f"Reminder checker error: {e}")
@@ -70,6 +70,19 @@ def route_command(command, gui):
         msg = "Good night Sir" if (hour >= 21 or hour < 5) else "Goodbye Sir, have a great day"
         respond(gui, msg)
         gui.root.after(1200, gui._close)
+        return True
+
+    # Change voice
+    if any(t in c for t in ["change voice", "switch voice", "use voice", "set voice"]):
+        # Try to match a voice name from the catalog
+        for label, vid in VOICE_CATALOG:
+            short_label = label.split("(")[0].strip().lower()
+            if short_label in c:
+                set_voice(vid)
+                gui._update_voice_label()
+                respond(gui, f"Voice changed to {label}.")
+                return True
+        respond(gui, "I couldn't find that voice. You can pick from the VOICE menu in the top right.")
         return True
 
     # Identity
@@ -170,6 +183,14 @@ def handle_typed(command, gui):
     reply = brain.think(command)
     respond(gui, reply)
 
+def handle_voice_change(voice_id, gui):
+    set_voice(voice_id)
+    for label, vid in VOICE_CATALOG:
+        if vid == voice_id:
+            respond(gui, f"Voice changed to {label}.")
+            return
+    respond(gui, "Voice changed.")
+
 # -------------------------
 # Runner
 # -------------------------
@@ -205,6 +226,7 @@ if __name__ == "__main__":
     root = tk.Tk()
     gui = FuturisticGUI(root)
     gui.on_command = lambda c: handle_typed(c, gui)
+    gui.on_voice_change = lambda v: handle_voice_change(v, gui)
     threading.Thread(target=start_dum_e, args=(gui,), daemon=True).start()
     threading.Thread(target=reminder_checker, args=(gui,), daemon=True).start()
     root.mainloop()
