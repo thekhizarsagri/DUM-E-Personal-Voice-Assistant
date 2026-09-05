@@ -39,7 +39,6 @@ class FuturisticGUI:
         self._closed = False
         self.on_command = None
         self.on_voice_change = None
-        self._voice_dropdown_open = False
 
         root.geometry("920x720")
         root.overrideredirect(True)
@@ -129,6 +128,9 @@ class FuturisticGUI:
 
     # ---------------- Voice selector ----------------
     def _build_voice_selector(self):
+        self._female_voice_id = "en-US-SaraNeural"
+        self._male_voice_id = "en-US-AndrewNeural"
+
         self.voice_btn = tk.Button(
             self.canvas, text="VOICE", font=("Consolas", 9, "bold"),
             fg=CYAN, bg=PANEL_COLOR, bd=0, relief=tk.FLAT,
@@ -145,8 +147,6 @@ class FuturisticGUI:
         self.voice_label.place(x=696, y=110, anchor="w")
         self._update_voice_label()
 
-        self._voice_dropdown = None
-
     def _update_voice_label(self):
         current = get_voice()
         for label, vid in VOICE_CATALOG:
@@ -156,92 +156,14 @@ class FuturisticGUI:
         self.voice_label.config(text=current)
 
     def _toggle_voice_dropdown(self):
-        if self._voice_dropdown_open:
-            self._close_voice_dropdown()
-        else:
-            self._open_voice_dropdown()
-
-    def _open_voice_dropdown(self):
-        if self._voice_dropdown_open:
-            return
-        self._voice_dropdown_open = True
-
         current = get_voice()
-
-        # Position the Toplevel right below the VOICE button
-        btn_x = self.voice_btn.winfo_rootx()
-        btn_y = self.voice_btn.winfo_rooty()
-        btn_w = self.voice_btn.winfo_width()
-
-        win = tk.Toplevel(self.root)
-        win.overrideredirect(True)
-        win.configure(bg=PANEL_COLOR, highlightthickness=1, highlightbackground=CYAN)
-        win.geometry(f"{btn_w + 140}x{min(340, 36 * len(VOICE_CATALOG) + 10)}+{btn_x}+{btn_y + 28}")
-
-        # Scrollable container
-        canvas_inner = tk.Canvas(win, bg=PANEL_COLOR, highlightthickness=0, bd=0,
-                                  highlightscrollbackground=PANEL_COLOR)
-        scrollbar = tk.Scrollbar(win, orient="vertical", command=canvas_inner.yview,
-                                  bg=PANEL_COLOR, troughcolor=BG_BOTTOM, bd=0,
-                                  highlightthickness=0)
-        inner = tk.Frame(canvas_inner, bg=PANEL_COLOR)
-
-        inner.bind("<Configure>", lambda e: canvas_inner.configure(scrollregion=canvas_inner.bbox("all")))
-        canvas_inner.create_window((0, 0), window=inner, anchor="nw", tags="inner_win")
-        canvas_inner.configure(yscrollcommand=scrollbar.set)
-
-        # Make inner frame fill the canvas width
-        def _resize_inner(event):
-            canvas_inner.itemconfig("inner_win", width=event.width)
-        canvas_inner.bind("<Configure>", _resize_inner)
-
-        # Mousewheel scroll
-        def _on_mousewheel(event):
-            canvas_inner.yview_scroll(int(-1 * (event.delta / 120)), "units")
-        canvas_inner.bind("<MouseWheel>", _on_mousewheel)
-        inner.bind("<MouseWheel>", _on_mousewheel)
-
-        for label, vid in VOICE_CATALOG:
-            is_current = (vid == current)
-            btn = tk.Button(
-                inner,
-                text=f"{'▸ ' if is_current else '  '}{label}",
-                font=("Consolas", 10, "bold" if is_current else "normal"),
-                fg=CYAN if is_current else TEXT_COLOR,
-                bg=hex_mix(BLUE, PANEL_COLOR, 0.3) if is_current else PANEL_COLOR,
-                bd=0, relief=tk.FLAT,
-                anchor="w", padx=10, pady=3,
-                activebackground=BLUE, activeforeground="#b0f0ff",
-                cursor="hand2",
-                command=lambda v=vid: self._select_voice(v),
-            )
-            btn.pack(fill="x", padx=2)
-
-        canvas_inner.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
-        self._voice_dropdown = win
-
-        # grab_set works on Toplevel — captures all input while open
-        win.grab_set()
-        win.focus_set()
-        win.bind("<Escape>", lambda e: self._close_voice_dropdown())
-
-    def _close_voice_dropdown(self):
-        if self._voice_dropdown:
-            try:
-                self._voice_dropdown.grab_release()
-            except tk.TclError:
-                pass
-            self._voice_dropdown.destroy()
-            self._voice_dropdown = None
-        self._voice_dropdown_open = False
-
-    def _select_voice(self, voice_id):
-        self._close_voice_dropdown()
-        self._update_voice_label()
+        if current == self._female_voice_id:
+            new_voice = self._male_voice_id
+        else:
+            new_voice = self._female_voice_id
         if self.on_voice_change:
-            threading.Thread(target=self.on_voice_change, args=(voice_id,), daemon=True).start()
+            threading.Thread(target=self.on_voice_change, args=(new_voice,), daemon=True).start()
+        self._update_voice_label()
 
     # ---------------- Dragging ----------------
     def _bind_drag(self):

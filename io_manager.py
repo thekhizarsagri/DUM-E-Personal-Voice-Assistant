@@ -29,6 +29,7 @@ VOICE_CATALOG = [
     ("Emma (Female, US)", "en-US-EmmaNeural"),
     ("Eric (Male, US)", "en-US-EricNeural"),
     ("Ana (Female, US)", "en-US-AnaNeural"),
+    ("Sara (Female, US)", "en-US-SaraNeural"),
     ("Ryan (Male, UK)", "en-GB-RyanNeural"),
     ("Sonia (Female, UK)", "en-GB-SoniaNeural"),
     ("Thomas (Male, UK)", "en-GB-ThomasNeural"),
