@@ -9,7 +9,8 @@ from io_manager import speak, mic_listener, set_voice, get_voice, VOICE_CATALOG
 from ui import FuturisticGUI
 from skills import (
     get_weather, open_youtube, search_google, show_image, find_city,
-    tell_joke, add_reminder, get_reminders, cancel_reminder, check_reminders
+    tell_joke, add_reminder, get_reminders, cancel_reminder, check_reminders,
+    add_note, get_notes, delete_note, search_notes, clear_notes, edit_note
 )
 
 awake_mode = True
@@ -173,6 +174,78 @@ def route_command(command, gui):
         time_str = remind_match.group(2).strip()
         respond(gui, add_reminder(task, time_str))
         return True
+
+    # ---- Notes / Tasks ----
+    # Search notes: "search notes for milk" / "find notes milk" / "search note ..."
+    if any(t in c for t in ["search notes", "search note", "find notes", "find note"]):
+        # extract query after notes/note keyword
+        m = re.search(r"(?:search|find)\s+notes?\s*(?:for)?\s*(.*)", c)
+        q = m.group(1).strip() if m else ""
+        # strip filler words
+        for w in ["for ", "about "]:
+            if q.startswith(w):
+                q = q[len(w):].strip()
+        if q:
+            respond(gui, search_notes(q))
+        else:
+            respond(gui, "Tell me what to search — say 'search notes for milk'.")
+        return True
+
+    # Clear all notes: "clear notes" / "delete all notes" / "clear all notes"
+    if any(t in c for t in ["clear all notes", "delete all notes", "clear notes"]):
+        respond(gui, clear_notes())
+        return True
+
+    # Edit note: "edit note 2 to new text" / "update note 3 ..."
+    edit_match = re.search(r"(?:edit|update)\s+note\s+(\d+)\s+(?:to\s+)?(.+)", c)
+    if edit_match:
+        try:
+            nid = int(edit_match.group(1))
+            new_text = edit_match.group(2).strip()
+            respond(gui, edit_note(nid, new_text))
+        except ValueError:
+            respond(gui, "Tell me which note to edit — say 'edit note 2 to buy almond milk'.")
+        return True
+
+    # Delete note: "delete note 2" / "remove note milk" / "forget note ..."
+    if any(t in c for t in ["delete note", "remove note", "forget note", "delete notes", "remove notes"]):
+        m = re.search(r"(?:delete|remove|forget)\s+notes?\s*(.*)", c)
+        q = m.group(1).strip() if m else ""
+        # strip leading filler
+        for w in ["number ", "#", "note "]:
+            if q.startswith(w):
+                q = q[len(w):].strip()
+        respond(gui, delete_note(q))
+        return True
+
+    # List notes: "show notes" / "list notes" / "read notes" / "my notes" / "what are my notes"
+    if any(t in c for t in ["show notes", "list notes", "read notes", "my notes", "show my notes", "what are my notes"]):
+        respond(gui, get_notes())
+        return True
+    # Also handle bare "notes" when asking to see them
+    if c.strip() in ["notes", "show notes"]:
+        respond(gui, get_notes())
+        return True
+
+    # Add note: "take a note ..." / "add note ..." / "remember that ..." etc.
+    note_triggers = [
+        "take a note ", "take note ", "add a note ", "add note ",
+        "create a note ", "create note ", "remember that ", "remember to ",
+        "write down ", "note down ", "save note ",
+    ]
+    for trig in note_triggers:
+        if trig in c:
+            content = c.split(trig, 1)[-1].strip()
+            # For voice robustness, also try without trailing space trigger
+            if content:
+                respond(gui, add_note(content))
+                return True
+    # Fallback trigger without trailing content split — e.g., "note buy milk"
+    if c.startswith("note "):
+        content = c[5:].strip()
+        if content and content not in ["notes"]:
+            respond(gui, add_note(content))
+            return True
 
     return False
 

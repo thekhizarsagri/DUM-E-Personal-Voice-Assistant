@@ -20,6 +20,10 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# App data
+notes.json
+reminders.json
+
 # Temp audio files
 *.mp3
 *.wav

@@ -250,3 +250,123 @@ def check_reminders() -> list:
         save_reminders(remaining)
 
     return due
+
+
+# -------------------------
+# Notes / Tasks
+# -------------------------
+NOTES_FILE = "notes.json"
+
+
+def load_notes() -> list:
+    if os.path.exists(NOTES_FILE):
+        try:
+            with open(NOTES_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data if isinstance(data, list) else []
+        except (json.JSONDecodeError, IOError):
+            return []
+    return []
+
+
+def save_notes(notes: list):
+    with open(NOTES_FILE, "w", encoding="utf-8") as f:
+        json.dump(notes, f, indent=2, ensure_ascii=False)
+
+
+def add_note(text: str) -> str:
+    text = text.strip().strip(".").strip()
+    if not text:
+        return "I didn't catch what to note down. Try saying 'take a note buy milk tomorrow'."
+    notes = load_notes()
+    new_id = (max((n.get("id", 0) for n in notes), default=0) + 1)
+    notes.append({
+        "id": new_id,
+        "text": text,
+        "created": datetime.now().isoformat(),
+    })
+    save_notes(notes)
+    return f"Note saved as #{new_id}: {text}"
+
+
+def get_notes() -> str:
+    notes = load_notes()
+    if not notes:
+        return "You have no notes yet. Say 'take a note ...' to add one."
+    lines = [f"Your notes ({len(notes)}):"]
+    for n in notes:
+        try:
+            dt = datetime.fromisoformat(n["created"])
+            when = dt.strftime("%b %d %I:%M %p").lstrip("0")
+        except Exception:
+            when = "unknown time"
+        lines.append(f"{n['id']}. {n['text']}  [{when}]")
+    return "\n".join(lines)
+
+
+def delete_note(query: str) -> str:
+    notes = load_notes()
+    if not notes:
+        return "You have no notes to delete."
+    query = query.strip().lower()
+    if not query:
+        return "Tell me which note to delete — say 'delete note 2' or 'delete note buy milk'."
+
+    # Try numeric id first
+    try:
+        qid = int(re.search(r"\d+", query).group())
+        for i, n in enumerate(notes):
+            if n.get("id") == qid:
+                removed = notes.pop(i)
+                save_notes(notes)
+                return f"Deleted note #{qid}: {removed['text']}"
+    except Exception:
+        pass
+
+    # Text match
+    for i, n in enumerate(notes):
+        if query in n.get("text", "").lower():
+            removed = notes.pop(i)
+            save_notes(notes)
+            return f"Deleted note #{removed['id']}: {removed['text']}"
+
+    return f"No note found matching '{query}'. Say 'show notes' to see all notes."
+
+
+def search_notes(query: str) -> str:
+    notes = load_notes()
+    query = query.strip().lower()
+    if not query:
+        return "Tell me what to search for — say 'search notes for milk'."
+    if not notes:
+        return "You have no notes yet."
+    hits = [n for n in notes if query in n.get("text", "").lower()]
+    if not hits:
+        return f"No notes found matching '{query}'."
+    lines = [f"Found {len(hits)} note(s) for '{query}':"]
+    for n in hits:
+        lines.append(f"{n['id']}. {n['text']}")
+    return "\n".join(lines)
+
+
+def clear_notes() -> str:
+    notes = load_notes()
+    if not notes:
+        return "You have no notes to clear."
+    save_notes([])
+    return f"Cleared all {len(notes)} note(s)."
+
+
+def edit_note(note_id: int, new_text: str) -> str:
+    notes = load_notes()
+    new_text = new_text.strip()
+    if not new_text:
+        return "New text cannot be empty."
+    for n in notes:
+        if n.get("id") == note_id:
+            old = n["text"]
+            n["text"] = new_text
+            n["updated"] = datetime.now().isoformat()
+            save_notes(notes)
+            return f"Updated note #{note_id}: '{old}' -> '{new_text}'"
+    return f"No note found with id #{note_id}."
