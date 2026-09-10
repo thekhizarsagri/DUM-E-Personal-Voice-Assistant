@@ -15,29 +15,12 @@ _SPEAK_LOCK = threading.Lock()
 # ----------------------------
 selected_voice = "en-US-AndrewNeural"
 
-# Curated voice catalog: (label, voice_id)
+# Curated voice catalog: (label, voice_id) — 2 male / 2 female, all verified edge-tts voices
 VOICE_CATALOG = [
     ("Andrew (Male, US)", "en-US-AndrewNeural"),
-    ("Ava (Female, US)", "en-US-AvaNeural"),
-    ("Brian (Male, US)", "en-US-BrianNeural"),
-    ("Jenny (Female, US)", "en-US-JennyNeural"),
-    ("Guy (Male, US)", "en-US-GuyNeural"),
-    ("Aria (Female, US)", "en-US-AriaNeural"),
-    ("Roger (Male, US)", "en-US-RogerNeural"),
-    ("Michelle (Female, US)", "en-US-MichelleNeural"),
     ("Christopher (Male, US)", "en-US-ChristopherNeural"),
-    ("Emma (Female, US)", "en-US-EmmaNeural"),
-    ("Eric (Male, US)", "en-US-EricNeural"),
-    ("Ana (Female, US)", "en-US-AnaNeural"),
-    ("Sara (Female, US)", "en-US-SaraNeural"),
-    ("Ryan (Male, UK)", "en-GB-RyanNeural"),
-    ("Sonia (Female, UK)", "en-GB-SoniaNeural"),
-    ("Thomas (Male, UK)", "en-GB-ThomasNeural"),
-    ("Libby (Female, UK)", "en-GB-LibbyNeural"),
-    ("Liam (Male, CA)", "en-CA-LiamNeural"),
-    ("Clara (Female, CA)", "en-CA-ClaraNeural"),
-    ("William (Male, AU)", "en-AU-WilliamMultilingualNeural"),
-    ("Natasha (Female, AU)", "en-AU-NatashaNeural"),
+    ("Aria (Female, US)", "en-US-AriaNeural"),
+    ("Jenny (Female, US)", "en-US-JennyNeural"),
 ]
 
 

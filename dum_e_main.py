@@ -74,16 +74,48 @@ def route_command(command, gui):
         return True
 
     # Change voice
-    if any(t in c for t in ["change voice", "switch voice", "use voice", "set voice"]):
-        # Try to match a voice name from the catalog
+    if any(t in c for t in ["change voice", "switch voice", "use voice", "set voice", "different voice", "next voice", "male voice", "female voice"]):
+        # Helper to apply voice + refresh label thread-safely
+        def _apply_voice(vid, label):
+            set_voice(vid)
+            try:
+                gui.refresh_voice_label()
+            except AttributeError:
+                try:
+                    gui.root.after(0, gui._update_voice_label)
+                except Exception:
+                    pass
+            respond(gui, f"Voice changed to {label}.")
+            return True
+
+        # Shorthand: "male voice" / "female voice" picks first match in catalog
+        if "male voice" in c and "female" not in c:
+            for label, vid in VOICE_CATALOG:
+                if "male" in label.lower() and "female" not in label.lower():
+                    return _apply_voice(vid, label)
+        if "female voice" in c:
+            for label, vid in VOICE_CATALOG:
+                if "female" in label.lower():
+                    return _apply_voice(vid, label)
+        # "next voice" cycles through the 4-voice catalog
+        if "next voice" in c or "different voice" in c:
+            current = get_voice()
+            ids = [vid for _, vid in VOICE_CATALOG]
+            try:
+                nxt = ids[(ids.index(current) + 1) % len(ids)]
+            except ValueError:
+                nxt = ids[0]
+            for label, vid in VOICE_CATALOG:
+                if vid == nxt:
+                    return _apply_voice(vid, label)
+        # Try to match a voice name from the catalog (e.g. "change voice to aria")
         for label, vid in VOICE_CATALOG:
             short_label = label.split("(")[0].strip().lower()
-            if short_label in c:
-                set_voice(vid)
-                gui._update_voice_label()
-                respond(gui, f"Voice changed to {label}.")
-                return True
-        respond(gui, "I couldn't find that voice. You can pick from the VOICE menu in the top right.")
+            first_name = short_label.split()[0]
+            if short_label in c or first_name in c:
+                return _apply_voice(vid, label)
+        names = ", ".join(l.split(" (")[0] for l, _ in VOICE_CATALOG)
+        respond(gui, f"I couldn't find that voice. Say one of: {names}. Or pick from the VOICE menu.")
         return True
 
     # Identity
@@ -258,6 +290,14 @@ def handle_typed(command, gui):
 
 def handle_voice_change(voice_id, gui):
     set_voice(voice_id)
+    # Refresh the UI label on the Tk main thread (thread-safe)
+    try:
+        gui.refresh_voice_label()
+    except AttributeError:
+        try:
+            gui.root.after(0, gui._update_voice_label)
+        except Exception:
+            pass
     for label, vid in VOICE_CATALOG:
         if vid == voice_id:
             respond(gui, f"Voice changed to {label}.")

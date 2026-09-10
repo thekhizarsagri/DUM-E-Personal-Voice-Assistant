@@ -128,11 +128,10 @@ class FuturisticGUI:
 
     # ---------------- Voice selector ----------------
     def _build_voice_selector(self):
-        self._female_voice_id = "en-US-SaraNeural"
-        self._male_voice_id = "en-US-AndrewNeural"
+        self._voice_dropdown = None
 
         self.voice_btn = tk.Button(
-            self.canvas, text="VOICE", font=("Consolas", 9, "bold"),
+            self.canvas, text="VOICE ▾", font=("Consolas", 9, "bold"),
             fg=CYAN, bg=PANEL_COLOR, bd=0, relief=tk.FLAT,
             highlightthickness=1, highlightbackground=hex_mix(CYAN, BG_BOTTOM, 0.45),
             activebackground=BLUE, activeforeground="#b0f0ff",
@@ -151,19 +150,80 @@ class FuturisticGUI:
         current = get_voice()
         for label, vid in VOICE_CATALOG:
             if vid == current:
-                self.voice_label.config(text=label)
+                # Thread-safe: if called from worker thread, reschedule on main thread
+                try:
+                    self.voice_label.config(text=label)
+                except tk.TclError:
+                    pass
                 return
-        self.voice_label.config(text=current)
+        try:
+            self.voice_label.config(text=current)
+        except tk.TclError:
+            pass
+
+    def refresh_voice_label(self):
+        """Thread-safe wrapper — always updates on the Tk main thread."""
+        try:
+            self.root.after(0, self._update_voice_label)
+        except tk.TclError:
+            pass
 
     def _toggle_voice_dropdown(self):
+        # Close if already open
+        if self._voice_dropdown is not None:
+            try:
+                self._voice_dropdown.destroy()
+            except tk.TclError:
+                pass
+            self._voice_dropdown = None
+            return
+
         current = get_voice()
-        if current == self._female_voice_id:
-            new_voice = self._male_voice_id
-        else:
-            new_voice = self._female_voice_id
+        menu = tk.Toplevel(self.root)
+        menu.overrideredirect(True)
+        menu.configure(bg=PANEL_COLOR, highlightthickness=1, highlightbackground=PANEL_EDGE)
+        menu.attributes("-topmost", True)
+        # Position just under the VOICE button
+        try:
+            bx = self.voice_btn.winfo_rootx()
+            by = self.voice_btn.winfo_rooty() + self.voice_btn.winfo_height() + 4
+        except tk.TclError:
+            bx, by = self.root.winfo_x() + 600, self.root.winfo_y() + 140
+        menu.geometry(f"+{bx}+{by}")
+        self._voice_dropdown = menu
+
+        for label, vid in VOICE_CATALOG:
+            is_current = (vid == current)
+            marker = "● " if is_current else "○ "
+            btn = tk.Button(
+                menu, text=f"{marker}{label}", font=("Consolas", 9, "bold" if is_current else "normal"),
+                fg=CYAN if is_current else TEXT_COLOR, bg=PANEL_COLOR,
+                bd=0, relief=tk.FLAT, anchor="w",
+                activebackground=BLUE, activeforeground="#b0f0ff",
+                cursor="hand2", command=lambda v=vid: self._select_voice(v),
+            )
+            btn.pack(fill=tk.X, padx=2, pady=1, ipadx=8, ipady=4)
+
+        # Auto-close when focus is lost
+        menu.bind("<FocusOut>", lambda e: self._close_voice_dropdown())
+        menu.focus_force()
+
+    def _close_voice_dropdown(self):
+        if self._voice_dropdown is not None:
+            try:
+                self._voice_dropdown.destroy()
+            except tk.TclError:
+                pass
+            self._voice_dropdown = None
+
+    def _select_voice(self, voice_id: str):
+        self._close_voice_dropdown()
         if self.on_voice_change:
-            threading.Thread(target=self.on_voice_change, args=(new_voice,), daemon=True).start()
-        self._update_voice_label()
+            threading.Thread(target=self.on_voice_change, args=(voice_id,), daemon=True).start()
+        else:
+            from io_manager import set_voice as _set_voice
+            _set_voice(voice_id)
+            self.refresh_voice_label()
 
     # ---------------- Dragging ----------------
     def _bind_drag(self):
