@@ -10,7 +10,8 @@ from ui import FuturisticGUI
 from skills import (
     get_weather, open_youtube, search_google, show_image, find_city,
     tell_joke, add_reminder, get_reminders, cancel_reminder, check_reminders,
-    add_note, get_notes, delete_note, search_notes, clear_notes, edit_note
+    add_note, get_notes, delete_note, search_notes, clear_notes, edit_note,
+    calculate_expression
 )
 
 awake_mode = True
@@ -143,6 +144,21 @@ def route_command(command, gui):
         city = find_city(c)
         respond(gui, get_weather(city))
         return True
+
+    # Calculator / Unit converter — after identity/purpose so
+    # "what is your name" isn't treated as math
+    calc_triggers = [
+        "calculate", "compute", "solve", "how much is",
+        "what is", "what's", "whats", "convert ",
+        "plus", "minus", "times", "divided by", "divide by",
+        "multiplied by", "multiply", "squared", "cubed",
+        "percent", "%",
+    ]
+    if any(t in c for t in calc_triggers):
+        answer = calculate_expression(c)
+        if answer is not None:
+            respond(gui, answer)
+            return True
 
     # Time / Date
     if "time" in c:

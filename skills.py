@@ -370,3 +370,185 @@ def edit_note(note_id: int, new_text: str) -> str:
             save_notes(notes)
             return f"Updated note #{note_id}: '{old}' -> '{new_text}'"
     return f"No note found with id #{note_id}."
+
+
+# -------------------------
+# Calculator + Unit Converter
+# -------------------------
+import ast
+import operator as _op
+
+_SAFE_OPS = {
+    ast.Add: _op.add, ast.Sub: _op.sub, ast.Mult: _op.mul,
+    ast.Div: _op.truediv, ast.Mod: _op.mod, ast.Pow: _op.pow,
+    ast.USub: _op.neg, ast.UAdd: _op.pos,
+}
+
+
+def _safe_eval(node):
+    if isinstance(node, ast.Expression):
+        return _safe_eval(node.body)
+    if isinstance(node, ast.Constant):
+        if isinstance(node.value, (int, float)):
+            return node.value
+        raise ValueError("Invalid number")
+    if isinstance(node, ast.BinOp) and type(node.op) in _SAFE_OPS:
+        left = _safe_eval(node.left)
+        right = _safe_eval(node.right)
+        return _SAFE_OPS[type(node.op)](left, right)
+    if isinstance(node, ast.UnaryOp) and type(node.op) in _SAFE_OPS:
+        return _SAFE_OPS[type(node.op)](_safe_eval(node.operand))
+    raise ValueError("Unsupported expression")
+
+
+def _format_number(value: float) -> str:
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    rounded = round(value, 6)
+    if isinstance(rounded, float) and rounded.is_integer():
+        return str(int(rounded))
+    return str(rounded)
+
+
+def _words_to_math(text: str) -> str:
+    t = text.lower().strip()
+    replacements = [
+        (r"\bmultiplied by\b", " * "), (r"\bmultiply by\b", " * "),
+        (r"\bdivided by\b", " / "), (r"\bdivide by\b", " / "),
+        (r"\bto the power of\b", " ** "), (r"\bto the power\b", " ** "),
+        (r"\bpower\b", " ** "), (r"\bsquared\b", " ** 2 "),
+        (r"\bcubed\b", " ** 3 "), (r"\btimes\b", " * "),
+        (r"\bplus\b", " + "), (r"\bminus\b", " - "),
+        (r"\bover\b", " / "), (r"\bmodulo\b", " % "),
+        (r"\bmod\b", " % "), (r"\bx\b", " * "),
+        (r"÷", " / "), (r"×", " * "), (r"−", " - "),
+    ]
+    for pattern, repl in replacements:
+        t = re.sub(pattern, repl, t)
+    # "15 percent of 200" -> "(15/100*200)"
+    t = re.sub(
+        r"(\d+(?:\.\d+)?)\s*percent\s+of\s+(\d+(?:\.\d+)?)",
+        r"(\1/100*\2)", t,
+    )
+    t = re.sub(r"(\d+(?:\.\d+)?)\s*%\s*of\s+(\d+(?:\.\d+)?)", r"(\1/100*\2)", t)
+    t = re.sub(r"(\d+(?:\.\d+)?)\s*%", r"(\1/100)", t)
+    return t
+
+
+def _extract_math(expr: str) -> str | None:
+    """Pull the math-looking portion out of a sentence, or None."""
+    # keep only chars that can appear in math
+    m = re.search(r"[-+*/%().\d\s*a-z]+", expr)
+    if not m:
+        return None
+    candidate = m.group(0).strip()
+    # must contain at least one digit and one operator
+    if not re.search(r"\d", candidate):
+        return None
+    if not re.search(r"[+\-*/%()^]", candidate):
+        return None
+    candidate = candidate.replace("^", "**").strip()
+    # reject if letters other than e (sci notation) remain
+    if re.search(r"[a-df-zA-DF-Z]", candidate):
+        return None
+    if not re.match(r"^[\d\s+\-*/%().**eE]+$", candidate):
+        return None
+    return candidate
+
+
+_LENGTH_TO_M = {
+    "km": 1000.0, "kilometer": 1000.0, "kilometers": 1000.0, "kilometre": 1000.0,
+    "m": 1.0, "meter": 1.0, "meters": 1.0, "metre": 1.0, "metres": 1.0,
+    "cm": 0.01, "centimeter": 0.01, "centimeters": 0.01,
+    "mm": 0.001, "millimeter": 0.001, "millimeters": 0.001,
+    "mi": 1609.344, "mile": 1609.344, "miles": 1609.344,
+    "ft": 0.3048, "foot": 0.3048, "feet": 0.3048,
+    "in": 0.0254, "inch": 0.0254, "inches": 0.0254,
+    "yd": 0.9144, "yard": 0.9144, "yards": 0.9144,
+}
+_weight_TO_KG = {
+    "kg": 1.0, "kilogram": 1.0, "kilograms": 1.0, "kilo": 1.0, "kilos": 1.0,
+    "g": 0.001, "gram": 0.001, "grams": 0.001,
+    "lb": 0.45359237, "lbs": 0.45359237, "pound": 0.45359237, "pounds": 0.45359237,
+    "oz": 0.028349523125, "ounce": 0.028349523125, "ounces": 0.028349523125,
+}
+
+
+def _convert_units(command: str) -> str | None:
+    m = re.search(
+        r"convert\s+(-?\d+(?:\.\d+)?)\s*([a-z°º]+)\s+(?:to|in|into)\s+([a-z°º]+)",
+        command.lower(),
+    )
+    if not m:
+        return None
+    value = float(m.group(1))
+    src = m.group(2).strip("°º.").lower()
+    dst = m.group(3).strip("°º.").lower()
+    src_c = src.replace("celsius", "c").replace("fahrenheit", "f").replace("kelvin", "k")
+    dst_c = dst.replace("celsius", "c").replace("fahrenheit", "f").replace("kelvin", "k")
+
+    # Temperature
+    if src_c in ("c", "f", "k") and dst_c in ("c", "f", "k"):
+        if src_c == "c":
+            celsius = value
+        elif src_c == "f":
+            celsius = (value - 32) * 5 / 9
+        else:
+            celsius = value - 273.15
+        if dst_c == "c":
+            out = celsius
+        elif dst_c == "f":
+            out = celsius * 9 / 5 + 32
+        else:
+            out = celsius + 273.15
+        return f"{_format_number(value)} {src} is {_format_number(out)} {dst}."
+
+    # Length
+    if src in _LENGTH_TO_M and dst in _LENGTH_TO_M:
+        meters = value * _LENGTH_TO_M[src]
+        out = meters / _LENGTH_TO_M[dst]
+        return f"{_format_number(value)} {src} is {_format_number(out)} {dst}."
+
+    # Weight
+    if src in _weight_TO_KG and dst in _weight_TO_KG:
+        kg = value * _weight_TO_KG[src]
+        out = kg / _weight_TO_KG[dst]
+        return f"{_format_number(value)} {src} is {_format_number(out)} {dst}."
+
+    return f"Sorry, I can't convert {src} to {dst} yet."
+
+
+def calculate_expression(command: str) -> str | None:
+    """Try to evaluate a voice math query. Returns answer string or None."""
+    converted = _convert_units(command)
+    if converted is not None:
+        return converted
+
+    text = command.lower().strip()
+    # strip leading trigger phrases
+    for prefix in ["calculate ", "compute ", "solve ", "evaluate ",
+                   "how much is ", "what is ", "what's ", "whats "]:
+        if text.startswith(prefix):
+            text = text[len(prefix):].strip()
+            break
+    else:
+        # also strip mid-sentence triggers like "hey dummy calculate ..."
+        for trig in ["calculate ", "compute ", "solve "]:
+            if trig in text:
+                text = text.split(trig, 1)[-1].strip()
+                break
+
+    math_text = _words_to_math(text)
+    candidate = _extract_math(math_text)
+    if not candidate:
+        return None
+    try:
+        tree = ast.parse(candidate, mode="eval")
+        result = _safe_eval(tree)
+        if isinstance(result, (int, float)):
+            return f"The answer is {_format_number(float(result))}."
+        return None
+    except ZeroDivisionError:
+        return "Anything divided by zero is undefined, Sir."
+    except Exception:
+        return None
