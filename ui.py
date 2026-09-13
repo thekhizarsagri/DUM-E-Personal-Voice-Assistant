@@ -5,18 +5,21 @@ import threading
 import random
 from io_manager import VOICE_CATALOG, get_voice
 
-# DUM-E glass theme — transparent dark blue glass, cyan & blue only
-BG_TOP = "#0b1836"
-BG_BOTTOM = "#01040b"
-PANEL_COLOR = "#0d1f40"
-PANEL_EDGE = "#2a4d86"
-CYAN = "#00eaff"
-CYAN_SOFT = "#5fd4ff"
-BLUE = "#2f7bff"
-BLUE_SOFT = "#4d8dff"
-RED = "#1a6bff"
-TEXT_COLOR = "#d5f1ff"
-DIM_COLOR = "#5d83b4"
+# DUM-E cyan monochrome theme — deep cyan glass, pure cyan only
+BG_TOP = "#03252d"
+BG_BOTTOM = "#00090b"
+PANEL_COLOR = "#042e36"
+PANEL_EDGE = "#0e7f93"
+CYAN = "#00f6ff"
+CYAN_SOFT = "#8ef9ff"
+CYAN_DEEP = "#00b8c7"
+CYAN_DIM = "#0090a0"
+BLUE = CYAN_DEEP      # kept for compat — always a cyan shade
+BLUE_SOFT = CYAN_DIM  # kept for compat — always a cyan shade
+RED = CYAN_DEEP       # kept for compat — no red in cyan theme
+GLOW_LIGHT = "#d9fdff"
+TEXT_COLOR = "#d9fdff"
+DIM_COLOR = "#4fa8b5"
 
 
 def hex_mix(c1, c2, t):
@@ -82,13 +85,13 @@ class FuturisticGUI:
         c.create_image(0, 0, anchor="nw", image=img, tags="bg")
 
         # faint hologrid for depth
-        grid = hex_mix(BLUE, BG_BOTTOM, 0.82)
+        grid = hex_mix(CYAN_DEEP, BG_BOTTOM, 0.82)
         for gx in range(20, w, 60):
             c.create_line(gx, 0, gx, h, fill=grid, width=1, tags="bg")
         for gy in range(20, h, 60):
             c.create_line(0, gy, w, gy, fill=grid, width=1, tags="bg")
         # edge vignette
-        c.create_rectangle(8, 8, 912, 712, outline="#0a1a3a", width=6, tags="bg")
+        c.create_rectangle(8, 8, 912, 712, outline="#062e36", width=6, tags="bg")
         c.tag_lower("bg")
 
     # ---------------- Glow text + corner brackets ----------------
@@ -107,6 +110,21 @@ class FuturisticGUI:
             c.create_line(x0, y0, x0 + dx * s, y0, fill=color, width=1, tags=tag)
             c.create_line(x0, y0, x0, y0 + dy * s, fill=color, width=1, tags=tag)
 
+    def _add_hover(self, btn, normal_fg, hover_fg=CYAN_SOFT):
+        """Subtle cyan hover glow for buttons."""
+        def _enter(_e):
+            try:
+                btn.config(fg=hover_fg, highlightbackground=CYAN)
+            except tk.TclError:
+                pass
+        def _leave(_e):
+            try:
+                btn.config(fg=normal_fg, highlightbackground=PANEL_EDGE)
+            except tk.TclError:
+                pass
+        btn.bind("<Enter>", _enter)
+        btn.bind("<Leave>", _leave)
+
     # ---------------- HUD header ----------------
     def _build_hud(self):
         self._glow_text(26, 20, "◆ DUM-E", ("Consolas", 17, "bold"), CYAN,
@@ -118,10 +136,21 @@ class FuturisticGUI:
             self.canvas, text="✕", font=("Consolas", 11, "bold"),
             fg=DIM_COLOR, bg=PANEL_COLOR, bd=0, relief=tk.FLAT,
             highlightthickness=1, highlightbackground=PANEL_EDGE,
-            activebackground=BLUE, activeforeground="#b0f0ff",
+            activebackground=CYAN_DEEP, activeforeground=GLOW_LIGHT,
             cursor="hand2", command=self._close,
         )
         self.close_btn.place(x=886, y=8, width=26, height=26)
+        self._add_hover(self.close_btn, DIM_COLOR, CYAN)
+
+        self.min_btn = tk.Button(
+            self.canvas, text="—", font=("Consolas", 11, "bold"),
+            fg=DIM_COLOR, bg=PANEL_COLOR, bd=0, relief=tk.FLAT,
+            highlightthickness=1, highlightbackground=PANEL_EDGE,
+            activebackground=CYAN_DEEP, activeforeground=GLOW_LIGHT,
+            cursor="hand2", command=self._minimize,
+        )
+        self.min_btn.place(x=856, y=8, width=26, height=26)
+        self._add_hover(self.min_btn, DIM_COLOR, CYAN)
 
         # static clock frame — drawn fresh each tick so it tracks theme color
         self._brackets(598, 24, 286, 76, 10, hex_mix(CYAN, BG_BOTTOM, 0.5), "clockframe")
@@ -134,10 +163,11 @@ class FuturisticGUI:
             self.canvas, text="VOICE ▾", font=("Consolas", 9, "bold"),
             fg=CYAN, bg=PANEL_COLOR, bd=0, relief=tk.FLAT,
             highlightthickness=1, highlightbackground=hex_mix(CYAN, BG_BOTTOM, 0.45),
-            activebackground=BLUE, activeforeground="#b0f0ff",
+            activebackground=CYAN_DEEP, activeforeground=GLOW_LIGHT,
             cursor="hand2", command=self._toggle_voice_dropdown,
         )
         self.voice_btn.place(x=600, y=108, width=90, height=26)
+        self._add_hover(self.voice_btn, CYAN, GLOW_LIGHT)
 
         self.voice_label = tk.Label(
             self.canvas, text="", font=("Consolas", 8),
@@ -199,7 +229,7 @@ class FuturisticGUI:
                 menu, text=f"{marker}{label}", font=("Consolas", 9, "bold" if is_current else "normal"),
                 fg=CYAN if is_current else TEXT_COLOR, bg=PANEL_COLOR,
                 bd=0, relief=tk.FLAT, anchor="w",
-                activebackground=BLUE, activeforeground="#b0f0ff",
+                activebackground=CYAN_DEEP, activeforeground=GLOW_LIGHT,
                 cursor="hand2", command=lambda v=vid: self._select_voice(v),
             )
             btn.pack(fill=tk.X, padx=2, pady=1, ipadx=8, ipady=4)
@@ -230,6 +260,7 @@ class FuturisticGUI:
         for w in (self.canvas,):
             w.bind("<Button-1>", self._start_move)
             w.bind("<B1-Motion>", self._do_move)
+        self.root.bind("<Map>", self._restore_decor)
 
     def _start_move(self, event):
         # Don't drag if clicking on interactive widgets
@@ -249,12 +280,27 @@ class FuturisticGUI:
         self._closed = True
         self.root.destroy()
 
+    def _minimize(self):
+        try:
+            self.root.overrideredirect(False)
+            self.root.iconify()
+        except tk.TclError:
+            pass
+
+    def _restore_decor(self, _event=None):
+        # Re-apply borderless style after de-minimize (Windows drops it)
+        try:
+            if self.root.state() == "normal":
+                self.root.overrideredirect(True)
+        except tk.TclError:
+            pass
+
     # ---------------- Animated glass border ----------------
     def _tick_border(self):
         if self._closed:
             return
         t = (math.sin(self.rot * 1.2) + 1) / 2
-        color = hex_mix(BLUE, CYAN, t)
+        color = hex_mix(CYAN_DEEP, CYAN, t)
         c = self.canvas
         c.delete("border")
 
@@ -274,8 +320,8 @@ class FuturisticGUI:
         c.create_rectangle(600, 26, 886, 100, outline=hex_mix(color, BG_BOTTOM, 0.25), width=1, tags="border")
         self._brackets(600, 26, 286, 74, 10, color, "border")
         # glass-top highlight on panels
-        c.create_line(24, 336, 896, 336, fill=hex_mix(color, "#b0f0ff", 0.45), width=1, tags="border")
-        c.create_line(24, 634, 734, 634, fill=hex_mix(color, "#b0f0ff", 0.45), width=1, tags="border")
+        c.create_line(24, 336, 896, 336, fill=hex_mix(color, GLOW_LIGHT, 0.45), width=1, tags="border")
+        c.create_line(24, 634, 734, 634, fill=hex_mix(color, GLOW_LIGHT, 0.45), width=1, tags="border")
 
         c.tag_lower("border")
         self.root.after(30, self._tick_border)
@@ -284,6 +330,11 @@ class FuturisticGUI:
     def _build_reactor(self):
         self.rx, self.ry = 460, 208
         self.rr = 62
+        self.reactor_label = tk.Label(
+            self.canvas, text="CORE 100% // STABLE", font=("Consolas", 8, "bold"),
+            fg=DIM_COLOR, bg=BG_BOTTOM,
+        )
+        self.reactor_label.place(x=460, y=308, anchor="center")
 
     def _tick_reactor(self):
         if self._closed:
@@ -321,7 +372,7 @@ class FuturisticGUI:
 
         c.create_arc(cx - r * 1.05, cy - r * 1.0, cx + r * 0.75, cy + r * 0.9,
                      start=205, extent=115, style=tk.PIESLICE,
-                     fill=hex_mix(col, "#b0f0ff", 0.62), outline="", tags="reactor")
+                     fill=hex_mix(col, GLOW_LIGHT, 0.62), outline="", tags="reactor")
         c.create_arc(cx - r * 0.75, cy - r * 0.9, cx + r * 1.05, cy + r * 1.0,
                      start=20, extent=115, style=tk.PIESLICE,
                      fill=hex_mix(BG_BOTTOM, col, 0.9), outline="", tags="reactor")
@@ -329,15 +380,26 @@ class FuturisticGUI:
         c.create_oval(cx - r * 0.55, cy - r * 0.55, cx + r * 0.55, cy + r * 0.55,
                       fill=hex_mix(BG_TOP, col, 0.68), outline="", tags="reactor")
         c.create_oval(cx - r * 0.2, cy - r * 0.2, cx + r * 0.2, cy + r * 0.2,
-                      fill=hex_mix(col, "#b0f0ff", 0.85), outline="", tags="reactor")
+                      fill=hex_mix(col, GLOW_LIGHT, 0.85), outline="", tags="reactor")
         c.create_oval(cx - r * 0.5, cy - r * 0.52, cx - r * 0.2, cy - r * 0.22,
-                      fill="#b0f0ff", outline="", tags="reactor")
+                      fill=GLOW_LIGHT, outline="", tags="reactor")
 
         for i in range(3):
             ang = math.radians(self.rot * 55 + i * 120)
             sx = cx + math.cos(ang) * r * 1.75
             sy = cy + math.sin(ang) * r * 0.62
             c.create_oval(sx - 3, sy - 3, sx + 3, sy + 3, fill=col, outline="", tags="reactor")
+
+        # live core readout (throttled to ~10fps to avoid label flicker)
+        if int(self.rot * 10) % 3 == 0:
+            try:
+                power = 96 + math.sin(self.rot * 0.9) * 4
+                self.reactor_label.config(
+                    text=f"CORE {power:05.1f}% // {self.status.upper()}",
+                    fg=self._color_cur,
+                )
+            except (tk.TclError, AttributeError):
+                pass
 
         self.root.after(30, self._tick_reactor)
 
@@ -346,12 +408,15 @@ class FuturisticGUI:
         self.status = status
         palette = {
             "Listening": CYAN,
-            "Thinking": BLUE,
-            "Speaking": CYAN_SOFT,
-            "Busy": BLUE,
+            "Thinking": CYAN_SOFT,
+            "Speaking": GLOW_LIGHT,
+            "Busy": CYAN_DEEP,
         }
         self._color_tgt = palette.get(status, CYAN)
-        self.status_label.config(text=f"{status.upper()}...", fg=self._color_tgt)
+        try:
+            self.status_label.config(text=f"{status.upper()}...", fg=self._color_tgt)
+        except (tk.TclError, AttributeError):
+            pass
 
     # ---------------- Glass droplets ----------------
     def _build_particles(self):
@@ -387,77 +452,179 @@ class FuturisticGUI:
         panel.place(x=24, y=336, width=872, height=284)
         self._brackets(24, 336, 872, 284, 12, hex_mix(CYAN, BG_BOTTOM, 0.4), "deco")
 
-        tk.Label(panel, text="// SYSTEM CONSOLE", font=("Consolas", 8, "bold"),
-                 fg=DIM_COLOR, bg=PANEL_COLOR).pack(anchor="w", padx=12, pady=(7, 0))
+        header = tk.Frame(panel, bg=PANEL_COLOR)
+        header.pack(fill=tk.X, padx=12, pady=(7, 0))
+        tk.Label(header, text="// SYSTEM CONSOLE", font=("Consolas", 8, "bold"),
+                 fg=DIM_COLOR, bg=PANEL_COLOR).pack(side=tk.LEFT)
+        tk.Button(header, text="CLEAR", font=("Consolas", 7, "bold"),
+                  fg=DIM_COLOR, bg=PANEL_COLOR, bd=0, relief=tk.FLAT,
+                  highlightthickness=0, activebackground=CYAN_DEEP,
+                  activeforeground=GLOW_LIGHT, cursor="hand2",
+                  command=self.clear_chat).pack(side=tk.RIGHT)
+
+        body = tk.Frame(panel, bg=PANEL_COLOR)
+        body.pack(fill=tk.BOTH, expand=True, padx=(10, 4), pady=(4, 10))
+
+        self.chat_scroll = tk.Scrollbar(body, orient=tk.VERTICAL, width=10,
+                                        bg=PANEL_COLOR, troughcolor=BG_BOTTOM,
+                                        activebackground=CYAN_DEEP,
+                                        highlightthickness=0, bd=0)
+        self.chat_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.chat = tk.Text(
-            panel, wrap=tk.WORD, font=("Consolas", 11), bg=PANEL_COLOR, fg=TEXT_COLOR,
+            body, wrap=tk.WORD, font=("Consolas", 11), bg=PANEL_COLOR, fg=TEXT_COLOR,
             bd=0, highlightthickness=0, insertbackground=CYAN,
+            yscrollcommand=self.chat_scroll.set, spacing1=2, spacing3=6,
+            selectbackground=CYAN_DEEP, selectforeground=GLOW_LIGHT,
         )
-        self.chat.pack(fill=tk.BOTH, expand=True, padx=10, pady=(4, 10))
+        self.chat.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.chat_scroll.config(command=self.chat.yview)
         self.chat.tag_configure("user", foreground=CYAN, font=("Consolas", 11, "bold"))
         self.chat.tag_configure("assistant", foreground=TEXT_COLOR)
+        self.chat.tag_configure("time", foreground=DIM_COLOR, font=("Consolas", 8))
+        self.chat.tag_configure("div", foreground=hex_mix(CYAN, BG_BOTTOM, 0.6))
         self.chat.config(state=tk.DISABLED)
-        for ev in ["<Button-1>", "<B1-Motion>", "<Double-Button-1>", "<Triple-Button-1>", "<Key>"]:
-            self.chat.bind(ev, lambda e: "break")
+        # Read-only but selectable: block edits, allow copy/selection
+        self.chat.bind("<Key>", lambda e: "break" if e.keysym not in ("c", "C", "a", "A") or not (e.state & 0x4) else None)
+
+    def clear_chat(self):
+        try:
+            self.chat.config(state=tk.NORMAL)
+            self.chat.delete("1.0", tk.END)
+            self.chat.config(state=tk.DISABLED)
+        except tk.TclError:
+            pass
 
     def add_message(self, message: str, sender="assistant"):
-        tag = "user" if sender == "user" else "assistant"
-        prefix = "YOU ▸" if sender == "user" else "DUM-E ▸"
-        self.chat.config(state=tk.NORMAL)
-        self.chat.insert(tk.END, f" {prefix}  ", tag)
-        self.chat.insert(tk.END, f"{message}\n\n", "assistant")
-        self.chat.see(tk.END)
-        self.chat.config(state=tk.DISABLED)
+        # Allow calls from worker threads
+        if threading.current_thread() is not threading.main_thread():
+            try:
+                self.root.after(0, self.add_message, message, sender)
+            except tk.TclError:
+                pass
+            return
+        try:
+            tag = "user" if sender == "user" else "assistant"
+            prefix = "YOU ▸" if sender == "user" else "DUM-E ▸"
+            stamp = time.strftime("%H:%M")
+            self.chat.config(state=tk.NORMAL)
+            self.chat.insert(tk.END, f"[{stamp}] ", "time")
+            self.chat.insert(tk.END, f" {prefix}  ", tag)
+            self.chat.insert(tk.END, f"{message}\n", "assistant")
+            self.chat.insert(tk.END, "─" * 52 + "\n", "div")
+            self.chat.see(tk.END)
+            self.chat.config(state=tk.DISABLED)
+        except tk.TclError:
+            pass
 
     # ---------------- Command input ----------------
     def _build_command_bar(self):
-        frame = tk.Frame(self.canvas, bg=PANEL_COLOR,
-                         highlightthickness=1, highlightbackground=PANEL_EDGE,
-                         bd=0, relief=tk.FLAT)
-        frame.place(x=24, y=634, width=710, height=40)
+        self.cmd_frame = tk.Frame(self.canvas, bg=PANEL_COLOR,
+                                  highlightthickness=1, highlightbackground=PANEL_EDGE,
+                                  bd=0, relief=tk.FLAT)
+        self.cmd_frame.place(x=24, y=634, width=710, height=40)
 
         self.input_var = tk.StringVar()
+        self._placeholder = "Ask DUM-E anything…  (type + Enter)"
         self.command_entry = tk.Entry(
-            frame, textvariable=self.input_var, font=("Consolas", 12),
-            bg=PANEL_COLOR, fg=TEXT_COLOR, insertbackground=CYAN,
+            self.cmd_frame, textvariable=self.input_var, font=("Consolas", 12),
+            bg=PANEL_COLOR, fg=DIM_COLOR, insertbackground=CYAN,
             bd=0, highlightthickness=0,
         )
         self.command_entry.place(x=10, y=0, width=692, height=40)
+        self.command_entry.insert(0, self._placeholder)
+        self._placeholder_on = True
+        self.command_entry.bind("<FocusIn>", self._on_entry_focus_in)
+        self.command_entry.bind("<FocusOut>", self._restore_placeholder)
+        self.command_entry.bind("<KeyPress>", self._on_entry_key)
         self.command_entry.bind("<Return>", self._send_command)
 
         self.send_btn = tk.Button(
-            self.canvas, text="EXECUTE", font=("Consolas", 10, "bold"),
+            self.canvas, text="EXECUTE ▸", font=("Consolas", 10, "bold"),
             fg=CYAN, bg=PANEL_COLOR, bd=0, relief=tk.FLAT,
             highlightthickness=1, highlightbackground=hex_mix(CYAN, BG_BOTTOM, 0.45),
-            activebackground=BLUE, activeforeground="#b0f0ff",
+            activebackground=CYAN_DEEP, activeforeground=GLOW_LIGHT,
             cursor="hand2", command=self._send_command,
         )
         self.send_btn.place(x=746, y=634, width=150, height=40)
+        self._add_hover(self.send_btn, CYAN, GLOW_LIGHT)
+
+    def _on_entry_focus_in(self, _event=None):
+        try:
+            self.cmd_frame.config(highlightbackground=CYAN)
+        except tk.TclError:
+            pass
+
+    def _on_entry_key(self, event=None):
+        # Clear placeholder on first real typing (not Return/Shift/etc.)
+        if getattr(self, "_placeholder_on", False):
+            if event is None or event.keysym not in ("Return", "Shift_L", "Shift_R",
+                                                     "Control_L", "Control_R",
+                                                     "Alt_L", "Alt_R", "Tab",
+                                                     "Up", "Down", "Left", "Right"):
+                self._placeholder_on = False
+                try:
+                    self.command_entry.delete(0, tk.END)
+                    self.command_entry.config(fg=TEXT_COLOR)
+                except tk.TclError:
+                    pass
+        return None
+
+    def _clear_placeholder(self, _event=None):
+        self._on_entry_focus_in(_event)
+        if self._placeholder_on:
+            self._placeholder_on = False
+            try:
+                self.command_entry.delete(0, tk.END)
+                self.command_entry.config(fg=TEXT_COLOR)
+            except tk.TclError:
+                pass
+
+    def _restore_placeholder(self, _event=None):
+        if not self.input_var.get().strip():
+            self._placeholder_on = True
+            self.command_entry.delete(0, tk.END)
+            self.command_entry.insert(0, self._placeholder)
+            self.command_entry.config(fg=DIM_COLOR)
+        try:
+            self.cmd_frame.config(highlightbackground=PANEL_EDGE)
+        except tk.TclError:
+            pass
 
     def _send_command(self, _event=None):
+        if getattr(self, "_placeholder_on", False):
+            return
         text = self.input_var.get().strip()
         if not text:
             return
         self.add_message(text, sender="user")
         self.input_var.set("")
+        self.command_entry.focus_set()
         if self.on_command:
             threading.Thread(target=self.on_command, args=(text,), daemon=True).start()
 
     # ---------------- Status bar ----------------
     def _build_status_bar(self):
+        tk.Label(
+            self.canvas, text="● SYS ONLINE", font=("Consolas", 8, "bold"),
+            fg=CYAN_DIM, bg=BG_BOTTOM,
+        ).place(x=24, y=696, anchor="w")
         self.status_label = tk.Label(
             self.canvas, text="LISTENING...", font=("Consolas", 11, "bold"),
             fg=CYAN, bg=BG_BOTTOM,
         )
         self.status_label.place(x=446, y=696, anchor="w")
+        tk.Label(
+            self.canvas, text="ENTER ↵ SEND", font=("Consolas", 8, "bold"),
+            fg=DIM_COLOR, bg=BG_BOTTOM,
+        ).place(x=896, y=696, anchor="e")
 
     def _tick_status_dot(self):
         if self._closed:
             return
         pulse = (math.sin(self.rot * 1.7) + 1) / 2
         d = 3.5 + pulse * 2
-        col = hex_mix(self._color_cur, "#b0f0ff", pulse * 0.55)
+        col = hex_mix(self._color_cur, GLOW_LIGHT, pulse * 0.55)
         self.canvas.delete("dot")
         self.canvas.create_oval(430 - d, 696 - d, 430 + d, 696 + d,
                                 fill=col, outline="", tags="dot")
@@ -495,7 +662,7 @@ class FuturisticGUI:
         c.create_rectangle(604, 92, 882, 96, fill=hex_mix(PANEL_EDGE, BG_BOTTOM, 0.6),
                            outline="", tags="clock")
         c.create_rectangle(604, 92, 604 + (882 - 604) * frac, 96,
-                           fill=hex_mix(CYAN, BLUE, frac), outline="", tags="clock")
+                           fill=hex_mix(CYAN_DEEP, CYAN, frac), outline="", tags="clock")
         c.create_rectangle(604, 92, 882, 96, outline=hex_mix(CYAN, BG_BOTTOM, 0.6),
                            width=1, tags="clock")
 
