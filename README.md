@@ -1,28 +1,44 @@
-# 🤖 DUM-E: Personal Voice Assistant
+<div align="center">
 
-> **Deep Universal Mind Electric** — An AI-powered personal voice assistant.
+# 🤖 DUM-E
+
+### ⚡ DEEP UNIVERSAL MIND ELECTRIC ⚡
+**Your Cyan-Powered Personal Voice Assistant**
+
+![Python](https://img.shields.io/badge/Python-3.10%2B-00f6ff?style=for-the-badge&logo=python&logoColor=black)
+![Groq](https://img.shields.io/badge/Groq-LLM-042e36?style=for-the-badge&logoColor=00f6ff)
+![Edge-TTS](https://img.shields.io/badge/Edge--TTS-Voice-00b8c7?style=for-the-badge)
+![UI](https://img.shields.io/badge/UI-Cyan_Holo-00f6ff?style=for-the-badge)
+
+*“Sometimes you gotta run before you can walk.”*
+
+</div>
 
 ---
 
-## 📜 Origin Story & About
+## 🌌 What is DUM-E?
 
-This project was originally created in **August 2025** just for fun! Driven by the dream of having a personal voice assistant to handle day-to-day tasks, **DUM-E** was built to provide an interactive, voice-driven interface powered by fast AI and dynamic visual feedback.
+Born in **August 2025** just for fun — built on the dream of having your **own JARVIS**.
+Talk to it. It listens, thinks, speaks, and acts — wrapped in a glowing **pure-cyan holo interface** with a live arc reactor core.
 
-> 🚀 **Modern Tech Upgrade Coming Soon!**  
-> This repository contains the original 2025 codebase of DUM-E uploaded to GitHub. Now, the project is being prepared for a major overhaul to integrate state-of-the-art modern AI tools, agentic workflows, real-time audio models, and expanded skill integrations.
+> 🚀 **Modern Tech Upgrade Incoming** — agentic workflows, real-time audio + deeper skills are on the roadmap.
 
 ---
 
-## ✨ Features
+## ✨ Superpowers
 
-- 🎙️ **Voice Recognition & Speech Synthesis**: Natural voice input via microphone and instant streaming speech feedback using `edge-tts` and `pygame`.
-- 🧠 **Groq LLM Integration**: Fast conversational intelligence powered by Groq's high-speed inference engine (`openai/gpt-oss-120b` with automatic fallback).
-- 🎨 **Futuristic Animated UI**: Built with Tkinter featuring glowing neon visual effects, dynamic pulsing orb animations, real-time clock, and custom title bars.
-- ⚡ **Voice Skills & Intent Routing**:
-  - **Live Weather Data**: Instant local weather updates via Open-Meteo API.
-  - **Web & Media Automation**: Quick YouTube search/play, Google search, and Google image lookup.
-  - **Time & Date**: Real-time date and time queries.
-  - **Identity & Persona**: Custom assistant identity rules, owner recognition, and sleep/wake voice modes ("Sleep Dummy" / "Wake up").
+| Domain | What it does |
+|---|---|
+| 🎙️ **Voice In / Out** | Mic input + streaming `edge-tts` speech via `pygame`, 20+ curated voices, in-app VOICE switcher |
+| 🧠 **Groq Brain** | Blazing-fast LLM (`openai/gpt-oss-120b` + fallback) with custom persona |
+| 🟦 **Cyan Holo UI** | Borderless glass Tkinter HUD — arc reactor, particles, glowing borders, live clock, console |
+| 🌦️ **Weather** | Live Open-Meteo data for any city |
+| 🌐 **Web & Media** | YouTube play/search, Google search, image lookup |
+| 🧮 **Calculator** | Voice math + unit conversion |
+| ⏰ **Reminders** | `remind me to ... at ...` with background checker |
+| 📝 **Notes & Tasks** | Add / list / search / edit / delete, all by voice |
+| 😂 **Jokes** | On-demand laughs |
+| 😴 **Sleep / Wake** | Say `sleep dummy` … `hey dummy, wake up` |
 
 ---
 
@@ -30,64 +46,57 @@ This project was originally created in **August 2025** just for fun! Driven by t
 
 ```text
 DumE_Project/
-├── brain.py          # Groq LLM integration and system prompt management
-├── dum_e_main.py     # Main application launcher and intent routing handler
-├── env_config.py     # Environment variable loader (.env configuration)
-├── io_manager.py     # Speech-to-Text (STT) and sentence-streaming Text-to-Speech (TTS)
-├── skills.py         # Weather, Web Search, YouTube, Image, and Utility skills
-├── ui.py             # Custom futuristic Tkinter graphical interface
-├── requirements.txt  # Python package dependencies
-├── .env.example      # Sample environment file template
-└── README.md         # Project documentation
+├── 🧠 brain.py        # Groq LLM + persona
+├── ⚡ dum_e_main.py   # Launcher + intent router
+├── 🔊 io_manager.py   # Mic STT + streaming TTS + voices
+├── 🛠️ skills.py       # Weather, web, notes, reminders, calc, jokes
+├── 🟦 ui.py           # Cyan monochrome holo interface
+├── ⚙️ env_config.py   # .env loader
+├── 📦 requirements.txt
+└── 🔑 .env.example
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Boot It Up
 
-### Prerequisites
+**You need:** Python 3.10+ · Mic + Speakers · Free [Groq API Key](https://console.groq.com)
 
-- Python 3.10 or higher
-- Microphone and Speakers connected to your system
-- A free [Groq API Key](https://console.groq.com)
-
-### Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/thekhizarsagri/DUM-E-Personal-Voice-Assistant.git
-   cd DUM-E-Personal-Voice-Assistant
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Configure Environment Variables**:
-   Copy `.env.example` to `.env` and insert your Groq API key:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env`:
-   ```env
-   GROQ_API_KEY=gsk_your_actual_groq_api_key_here
-   ```
-
-### Running DUM-E
-
-Launch the voice assistant by executing:
 ```bash
+# 1. Clone
+git clone https://github.com/thekhizarsagri/DUM-E-Personal-Voice-Assistant.git
+cd DUM-E-Personal-Voice-Assistant
+
+# 2. Install
+pip install -r requirements.txt
+
+# 3. Power the core
+cp .env.example .env
+# → edit .env: GROQ_API_KEY=gsk_your_key_here
+
+# 4. Wake DUM-E
 python dum_e_main.py
 ```
 
 ---
 
-## 👤 Author
+## 🎮 Try Saying
 
-**Khizar Sagri**  
-- GitHub: [@thekhizarsagri](https://github.com/thekhizarsagri)
+> *“What’s the weather in Mumbai?”*
+> *“Calculate 45 times 12 plus 10 percent”*
+> *“Remind me to drink water in 20 minutes”*
+> *“Take a note buy milk”*
+> *“Play Interstellar on YouTube”*
+> *“Switch to female voice” / “Next voice”*
+> *“Sleep dummy”*
 
 ---
 
-*“Sometimes you gotta run before you can walk.”*
+<div align="center">
+
+## 👤 Built by **Khizar Sagri**
+[![GitHub](https://img.shields.io/badge/GitHub-thekhizarsagri-042e36?style=for-the-badge&logo=github&logoColor=00f6ff)](https://github.com/thekhizarsagri)
+
+**⚡ CORE ONLINE // CYAN STABLE ⚡**
+
+</div>
