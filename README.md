@@ -1,102 +1,88 @@
-<div align="center">
+# DUM-E
 
-# 🤖 DUM-E
+## Deep Universal Mind Electric
 
-### ⚡ DEEP UNIVERSAL MIND ELECTRIC ⚡
-**Your Cyan-Powered Personal Voice Assistant**
+DUM-E is a desktop voice assistant built with Python and Tkinter. It listens through your microphone, uses Groq for natural-language responses, speaks with Edge TTS, and exposes practical tools for weather, web search, media, notes, reminders, and calculations.
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-00f6ff?style=for-the-badge&logo=python&logoColor=black)
-![Groq](https://img.shields.io/badge/Groq-LLM-042e36?style=for-the-badge&logoColor=00f6ff)
-![Edge-TTS](https://img.shields.io/badge/Edge--TTS-Voice-00b8c7?style=for-the-badge)
-![UI](https://img.shields.io/badge/UI-Cyan_Holo-00f6ff?style=for-the-badge)
+## Features
 
-*“Sometimes you gotta run before you can walk.”*
+| Area | Capabilities |
+| --- | --- |
+| Voice | Speech recognition, text-to-speech, and selectable voices |
+| Assistant | Groq-powered responses with a custom assistant persona |
+| Productivity | Voice notes, note search and editing, and timed reminders |
+| Information | Weather lookup, city search, Google search, and image lookup |
+| Media | YouTube search and playback |
+| Utilities | Natural-language calculations and jokes |
+| Controls | Sleep and wake modes, plus a live desktop interface |
 
-</div>
+## Requirements
 
----
+- Python 3.10 or newer
+- A working microphone and speakers
+- A [Groq API key](https://console.groq.com/)
+- Internet access for Groq, Edge TTS, weather, and web features
 
-## 🌌 What is DUM-E?
+## Installation
 
-Born in **August 2025** just for fun — built on the dream of having your **own JARVIS**.
-Talk to it. It listens, thinks, speaks, and acts — wrapped in a glowing **pure-cyan holo interface** with a live arc reactor core.
+From PowerShell or a terminal:
 
-> 🚀 **Modern Tech Upgrade Incoming** — agentic workflows, real-time audio + deeper skills are on the roadmap.
-
----
-
-## ✨ Superpowers
-
-| Domain | What it does |
-|---|---|
-| 🎙️ **Voice In / Out** | Mic input + streaming `edge-tts` speech via `pygame`, 20+ curated voices, in-app VOICE switcher |
-| 🧠 **Groq Brain** | Blazing-fast LLM (`openai/gpt-oss-120b` + fallback) with custom persona |
-| 🟦 **Cyan Holo UI** | Borderless glass Tkinter HUD — arc reactor, particles, glowing borders, live clock, console |
-| 🌦️ **Weather** | Live Open-Meteo data for any city |
-| 🌐 **Web & Media** | YouTube play/search, Google search, image lookup |
-| 🧮 **Calculator** | Voice math + unit conversion |
-| ⏰ **Reminders** | `remind me to ... at ...` with background checker |
-| 📝 **Notes & Tasks** | Add / list / search / edit / delete, all by voice |
-| 😂 **Jokes** | On-demand laughs |
-| 😴 **Sleep / Wake** | Say `sleep dummy` … `hey dummy, wake up` |
-
----
-
-## 📁 Project Structure
-
-```text
-DumE_Project/
-├── 🧠 brain.py        # Groq LLM + persona
-├── ⚡ dum_e_main.py   # Launcher + intent router
-├── 🔊 io_manager.py   # Mic STT + streaming TTS + voices
-├── 🛠️ skills.py       # Weather, web, notes, reminders, calc, jokes
-├── 🟦 ui.py           # Cyan monochrome holo interface
-├── ⚙️ env_config.py   # .env loader
-├── 📦 requirements.txt
-└── 🔑 .env.example
-```
-
----
-
-## 🚀 Boot It Up
-
-**You need:** Python 3.10+ · Mic + Speakers · Free [Groq API Key](https://console.groq.com)
-
-```bash
-# 1. Clone
+```powershell
 git clone https://github.com/thekhizarsagri/DUM-E-Personal-Voice-Assistant.git
 cd DUM-E-Personal-Voice-Assistant
 
-# 2. Install
-pip install -r requirements.txt
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-# 3. Power the core
-cp .env.example .env
-# → edit .env: GROQ_API_KEY=gsk_your_key_here
+Create a file named `.env` in the project folder and add your key:
 
-# 4. Wake DUM-E
+```text
+GROQ_API_KEY=gsk_your_key_here
+```
+
+Start the assistant:
+
+```powershell
 python dum_e_main.py
 ```
 
----
+On macOS or Linux, activate the virtual environment with `source .venv/bin/activate` instead.
 
-## 🎮 Try Saying
+## Example Commands
 
-> *“What’s the weather in Mumbai?”*
-> *“Calculate 45 times 12 plus 10 percent”*
-> *“Remind me to drink water in 20 minutes”*
-> *“Take a note buy milk”*
-> *“Play Interstellar on YouTube”*
-> *“Switch to female voice” / “Next voice”*
-> *“Sleep dummy”*
+Try saying:
 
----
+- "What is the weather in Mumbai?"
+- "Calculate 45 times 12 plus 10 percent"
+- "Remind me to drink water in 20 minutes"
+- "Take a note: buy milk"
+- "Play Interstellar on YouTube"
+- "Switch to female voice"
+- "Sleep dummy"
 
-<div align="center">
+## Project Layout
 
-## 👤 Built by **Khizar Sagri**
-[![GitHub](https://img.shields.io/badge/GitHub-thekhizarsagri-042e36?style=for-the-badge&logo=github&logoColor=00f6ff)](https://github.com/thekhizarsagri)
+```text
+DumE_Project/
+├── brain.py          Groq client and assistant persona
+├── dum_e_main.py     Application entry point and command routing
+├── io_manager.py     Microphone input, speech output, and voices
+├── skills.py         Weather, web, media, notes, reminders, and utilities
+├── ui.py             Tkinter desktop interface
+├── env_config.py     Local .env configuration loader
+└── requirements.txt  Python dependencies
+```
 
-**⚡ CORE ONLINE // CYAN STABLE ⚡**
+## Troubleshooting
 
-</div>
+- If the microphone is not detected, check the system input device and microphone permissions.
+- If speech output fails, check that your speakers are available and that the machine is online.
+- If the assistant cannot answer, confirm that `.env` is next to `dum_e_main.py` and contains a valid `GROQ_API_KEY`.
+- Keep `.env` private. It is intended for local credentials and should not be committed.
+
+## Author
+
+Built by [Khizar Sagri](https://github.com/thekhizarsagri).
